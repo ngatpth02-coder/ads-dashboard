@@ -1,79 +1,61 @@
 <!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Meta Ads Dashboard - Ngát P</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ads Control Center</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-  <style>
-    :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#059669;--amber:#d97706;--red:#dc2626;--blue:#2563eb}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1500px;margin:auto;padding:24px}.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
-    h1{margin:0;font-size:28px}.sub{color:var(--muted);margin-top:6px}.badge{padding:7px 10px;border-radius:999px;background:#ecfdf5;color:#065f46;font-weight:700;font-size:13px}
-    .controls{display:flex;gap:10px;flex-wrap:wrap}.btn,select,input[type="date"]{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 12px;font-weight:600}.btn{cursor:pointer}.btn.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
-    .grid{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-    .kpi .label{color:var(--muted);font-size:13px}.kpi .value{font-size:26px;font-weight:800;margin-top:7px}.kpi .hint{font-size:12px;color:var(--muted);margin-top:3px}
-    .two{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;margin-top:14px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
-    .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.section-title h2{font-size:17px;margin:0}.note{font-size:12px;color:var(--muted)}
-    canvas{width:100%!important;max-height:320px}.table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white;min-width:1200px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#111827;color:#fff;z-index:1}th:first-child,td:first-child{text-align:left;max-width:460px;white-space:normal}
-    tr:hover td{background:#f9fafb}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.good{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#92400e}.bad{background:#fee2e2;color:#991b1b}.neutral{background:#e5e7eb;color:#374151}
-    .alerts{display:grid;gap:10px}.alert{border-left:4px solid var(--amber);padding:11px 12px;background:#fffbeb;border-radius:8px}.alert.red{border-color:var(--red);background:#fef2f2}.alert.green{border-color:var(--green);background:#ecfdf5}.alert b{display:block;margin-bottom:3px}
-    .status{font-size:12px;color:var(--muted)}.filterbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.filter-group{display:flex;flex-direction:column;gap:5px}.filter-group label{font-size:12px;color:var(--muted);font-weight:700}.preset-group{display:flex;gap:6px;flex-wrap:wrap}.btn.small{padding:8px 10px;font-size:12px}.filter-status{font-size:12px;color:var(--muted);padding:9px 2px}.footer{margin:18px 0 6px;color:var(--muted);font-size:12px}
-    @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}}@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}}
-    [hidden]{display:none!important}.mode-switch{display:flex;background:#eff6ff;border-radius:12px;padding:4px;gap:4px}.mode-switch .btn{border:0;background:transparent}.mode-switch [aria-pressed="true"],.btn.active{background:#2563eb;color:white}.btn.primary{background:#2563eb;border-color:#2563eb}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}.business-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.business-row small{display:block;color:var(--muted);margin-top:5px}.empty{padding:20px 0;color:var(--muted);line-height:1.6}.row-link{border:0;background:none;color:var(--blue);cursor:pointer;font:inherit;text-align:left;padding:4px;white-space:normal}.section-title{gap:12px;flex-wrap:wrap}.grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}h2{font-size:17px}#drillPath .btn{margin:3px}.kpi .hint{line-height:1.5}.controls{align-items:center}
-  </style>
-</head>
+  <link rel="stylesheet" href="styles.css">
+<style>
+.mode-switch{display:flex;gap:4px;padding:4px;background:#eff6ff;border-radius:12px}.mode-switch .active,.preset .active{background:#2563eb;color:#fff}.top-actions{flex-wrap:wrap}.manager-only,.ads-only{display:none}body.manager .manager-only,body.ads .ads-only{display:block}body.manager #campaigns,body.manager #audiences,body.manager #overview>.grid-3,body.manager #overview>.card,body.manager .nav a[href="#campaigns"],body.manager .nav a[href="#audiences"],body.manager .nav a[href="#creatives"]{display:none}body.ads #campaigns{display:none}.business-row{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid #e5e7eb}.business-row small{display:block;color:#64748b;margin-top:5px}.empty{color:#64748b;padding:20px 0}.row-link{border:0;background:none;color:#2563eb;text-align:left;cursor:pointer;font:inherit}#dimensionTabs,#drillPath{margin:14px 0;display:flex;gap:8px;flex-wrap:wrap}button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}@media(max-width:600px){.main{min-width:0}.top-actions{gap:6px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-value{font-size:22px}.business-row{flex-wrap:wrap}.mode-switch{width:100%}}
+</style></head>
 <body>
-<div class="wrap">
-  <div class="topbar">
-    <div><h1>Meta Ads Dashboard — Ngát P</h1><div class="sub">BM GiGa - GiGa 3 · chủ động lọc theo ngày</div></div>
-    <div class="controls"><div class="mode-switch" role="group" aria-label="Chế độ dashboard"><button class="btn" data-mode="manager" aria-pressed="true">👔 Quản lý</button><button class="btn" data-mode="ads" aria-pressed="false">🎯 Ads</button></div><span id="connectionBadge" class="badge">DATA: SAMPLE</span><button class="btn" id="refreshBtn">↻ Cập nhật</button><select id="autoRefresh"><option value="0">Không auto-refresh</option><option value="300000">5 phút</option><option value="900000" selected>15 phút</option><option value="1800000">30 phút</option><option value="3600000">60 phút</option></select><button class="btn primary" id="exportBtn">Xuất CSV</button></div>
-  </div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Ads Control Center</div>
+    <div class="brand-sub">Internal performance dashboard</div>
+    <nav class="nav">
+      <a class="active" href="#overview">Overview</a><a href="#pages">Pages</a><a href="#products">Products</a><a href="#campaigns">Campaigns</a><a href="#audiences">Audiences</a><a href="#creatives">Creatives</a><a href="#ai">AI Insights</a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div class="title"><h1>Meta Ads Performance</h1><p id="subtitle">Toàn cảnh hiệu quả quảng cáo theo Page · Mục tiêu · Sản phẩm · Target</p></div>
+      <div class="top-actions"><div class="mode-switch" role="group" aria-label="Chế độ dashboard"><button class="btn active" data-mode="manager" aria-pressed="true">👔 Quản lý</button><button class="btn" data-mode="ads" aria-pressed="false">🎯 Ads</button></div><span id="connectionBadge" class="badge">DATA: SAMPLE</span><button id="refreshBtn" class="btn">↻ Cập nhật</button><button id="exportBtn" class="btn primary">Xuất CSV</button></div>
+    </header>
 
-  <div class="card" style="margin-bottom:14px">
-    <div class="filterbar">
-      <div class="filter-group"><label>Từ ngày</label><input type="date" id="startDate"></div>
-      <div class="filter-group"><label>Đến ngày</label><input type="date" id="endDate"></div>
-      <div class="filter-group"><label>Chọn nhanh</label><div class="preset-group">
-        <button class="btn small" data-range="7">7 ngày</button>
-        <button class="btn small" data-range="30">30 ngày</button>
-        <button class="btn small" data-range="thisMonth">Tháng này</button>
-        <button class="btn small" data-range="lastMonth">Tháng trước</button>
-        <button class="btn small" data-range="all">Tất cả dữ liệu</button>
-      </div></div>
-      <button class="btn primary" id="applyDateBtn">Áp dụng</button>
-      <span id="dateFilterStatus" class="filter-status"></span>
-    </div>
-  </div>
+    <section class="filter-panel">
+      <div class="filters">
+        <div class="field"><label>Từ ngày</label><input type="date" id="startDate"></div>
+        <div class="field"><label>Đến ngày</label><input type="date" id="endDate"></div>
+        <div class="field"><label>Page</label><select id="pageFilter"><option value="all">Tất cả Page</option></select></div>
+        <div class="field"><label>OBJECTIVE</label><select id="objectiveFilter"><option value="all">Tất cả</option><option value="Mess">Mess</option><option value="Lead">Lead</option><option value="Reach">Reach</option><option value="Click">Click</option><option value="CPAS">CPAS</option></select></div>
+        <div class="field"><label>Sản phẩm</label><select id="productFilter"><option value="all">Tất cả sản phẩm</option></select></div>
+        <div class="field"><label>Target</label><select id="targetFilter"><option value="all">Tất cả target</option></select></div>
+        <div class="field"><label>Trạng thái</label><select id="statusFilter"><option value="all">Tất cả</option><option value="scale">Scale</option><option value="watch">Watch</option><option value="cut">Cut</option></select></div>
+      </div>
+      <div class="filter-foot">
+        <div class="preset"><button class="btn small" data-range="7">7 ngày</button><button class="btn small" data-range="14">14 ngày</button><button class="btn small" data-range="30">30 ngày</button><button class="btn small" data-range="thisMonth">Tháng này</button><button class="btn small" data-range="all">Tất cả</button></div>
+        <div class="status"><strong id="dateRangeLabel">Mốc thời gian: —</strong><span style="margin-left:12px" id="filterStatus"></span></div>
+      </div>
+    </section>
 
-  <div class="grid" id="kpis"></div>
+    <section id="overview">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid-2 section"><div class="card charts"><div class="section-head"><h2>Xu hướng Spend · GMV · ROAS</h2><span class="note">Theo ngày</span></div><canvas id="trendChart"></canvas></div><div class="card ai-summary" id="ai"><h2>AI Executive Summary</h2><p id="aiText"></p><div class="actions" id="aiActions"></div></div></div>
+      <div class="grid-3 section"><div class="card charts"><div class="section-head"><h2>Ngân sách theo Page</h2><span class="note">Budget allocation</span></div><canvas id="pageChart"></canvas></div><div class="card charts"><div class="section-head"><h2>Theo OBJECTIVE</h2><span class="note">Mess / Lead / Reach / Click / CPAS</span></div><canvas id="objectiveChart"></canvas></div><div class="card charts"><div class="section-head"><h2>Ads Health Map</h2><span class="note">Spend vs ROAS</span></div><canvas id="healthChart"></canvas></div></div>
+      <div class="card section"><div class="section-head"><h2>Funnel toàn cảnh</h2><span class="note">Từ hiển thị đến doanh thu</span></div><div class="funnel" id="funnel"></div></div>
+    </section>
 
-  <section id="managerView" aria-label="Tổng quan quản lý">
-    <div class="two">
-      <div class="card"><div class="section-title"><h2>Xu hướng hiệu suất</h2></div><p class="note">Chi phí và kết quả theo ngày trong khoảng đã chọn</p><canvas id="trendChart"></canvas><p id="trendSummary" class="status" aria-live="polite"></p></div>
-      <div class="card"><div class="section-title"><h2>Cần xử lý</h2><span id="lastUpdated" class="status"></span></div><div id="alerts" class="alerts"></div></div>
-    </div>
-    <div class="three" id="businessGroups"></div>
-    <div class="card" style="margin-top:14px"><div class="section-title"><h2>Đội Ads đang chạy gì?</h2></div><div id="activity"></div></div>
-  </section>
-  <section id="adsView" aria-label="Phân tích Ads" hidden>
-    <div class="card" style="margin-top:14px">
-      <div class="section-title"><h2>Phân tích chuyên sâu</h2><button class="btn small" id="resetDrill">Xóa bộ lọc chi tiết</button></div>
-      <div class="filterbar"><label for="resultMetric">Kết quả / CPA theo</label><select id="resultMetric"><option value="purchases">Đơn hàng</option><option value="leads">Khách hàng tiềm năng</option><option value="messages">Tin nhắn</option></select></div>
-      <nav id="dimensionTabs" class="preset-group" aria-label="Cấp phân tích"></nav>
-      <div id="drillPath" class="filter-status" aria-live="polite"></div>
-      <p class="note">Chọn một dòng để đi sâu cấp tiếp theo. Results và CPA dùng loại kết quả đã chọn; CPL tính theo Leads. GMV là giá trị mua hàng được nguồn ghi nhận.</p>
-      <div class="table-wrap"><table><thead id="detailHead"></thead><tbody id="detailRows"></tbody></table></div>
-    </div>
-    <div class="three">
-      <div class="card"><h2>CTR theo nhóm</h2><canvas id="ctrChart"></canvas></div>
-      <div class="card"><h2>CPM theo nhóm</h2><canvas id="cpmChart"></canvas></div>
-      <div class="card"><h2>ROAS theo nhóm</h2><canvas id="roasChart"></canvas></div>
-    </div>
-  </section>
-  <div class="footer">Nguồn đề xuất: Supermetrics → Google Sheets. Website chỉ đọc sheet đã publish/endpoint Apps Script, không lưu mật khẩu Meta Ads.</div>
+    <section class="grid-2 section" id="pages"><div class="card"><div class="section-head"><h2>Page Performance</h2><span class="note">Page nào đang tạo hiệu quả</span></div><div class="rank-list" id="pageRanking"></div></div><div class="card"><div class="section-head"><h2>Cảnh báo & cơ hội</h2><span class="note">Ưu tiên xử lý</span></div><div class="alert-list" id="alerts"></div></div></section>
+    <section class="grid-2 section" id="products"><div class="card"><div class="section-head"><h2>Product Performance</h2><span class="note">Spend / GMV / ROAS</span></div><div class="rank-list" id="productRanking"></div></div><div class="card charts"><div class="section-head"><h2>Phân bổ ngân sách sản phẩm</h2><span class="note">Top sản phẩm</span></div><canvas id="productChart"></canvas></div></section>
+    <section class="card section" id="campaigns"><div class="section-head"><h2>Campaign Control Center</h2><span class="note">Kết quả → Chẩn đoán → Hành động</span></div><div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Page</th><th>Product</th><th>Objective</th><th>Target</th><th>Spend</th><th>Results</th><th>CPA/CPL</th><th>GMV</th><th>ROAS</th><th>CPM</th><th>CTR</th><th>CPC</th><th>Freq.</th><th>AI Action</th></tr></thead><tbody id="campaignRows"></tbody></table></div></section>
+    <section class="grid-2 section" id="audiences"><div class="card"><div class="section-head"><h2>Audience / Target Performance</h2><span class="note">Broad · Interest · LAL · Retarget</span></div><div class="table-wrap"><table style="min-width:700px"><thead><tr><th>Target</th><th>Spend</th><th>CTR</th><th>CPC</th><th>Results</th><th>ROAS</th></tr></thead><tbody id="audienceRows"></tbody></table></div></div><div class="card" id="creatives"><div class="section-head"><h2>Creative Intelligence</h2><span class="note">Hook → Click → Message</span></div><div class="alert-list" id="creativeInsights"></div></div></section>
+    <section class="card section manager-only"><div class="section-head"><h2>Nhân viên Ads · Chiến dịch trong kỳ</h2></div><div id="staffActivity"></div></section>
+<section class="card section ads-only" id="deepAnalysis"><div class="section-head"><h2>Phân tích chuyên sâu</h2><button class="btn small" id="resetDrill">Xóa bộ lọc chi tiết</button></div><div class="filters"><label for="resultMetric">Results / CPA theo</label><select id="resultMetric"><option value="purchases">Đơn hàng</option><option value="leads">Leads</option><option value="messages">Tin nhắn</option></select></div><nav id="dimensionTabs" class="preset" aria-label="Cấp phân tích"></nav><div id="drillPath" class="note" aria-live="polite"></div><p class="note">Chọn một dòng để đi sâu. CPL luôn tính theo Leads. Các chỉ số dựa trên nguồn đang chọn.</p><div class="table-wrap"><table><thead id="detailHead"></thead><tbody id="detailRows"></tbody></table></div></section>
+<div class="footer">Dashboard nội bộ · cấu trúc dữ liệu sẵn sàng nối Google Sheets / Supermetrics / Apps Script.</div>
+  </main>
 </div>
-<script src="config.js"></script>
-<script src="app.js"></script>
+<script src="config.js"></script><script src="app.js"></script><script src="patch.js"></script><script src="modes.js"></script>
 </body>
 </html>

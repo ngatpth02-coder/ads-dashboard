@@ -1,56 +1,79 @@
-# Meta Ads Dashboard — Ngát P
+# Ads Control Center — Internal Meta Ads Dashboard
 
-## Bản sửa bộ lọc ngày
+Dashboard nội bộ để theo dõi toàn cảnh Meta Ads theo **thời gian → Page → mục tiêu → sản phẩm → campaign → target → creative**.
 
-Bản này đã sửa lỗi dữ liệu không thay đổi khi đổi ngày.
+## Chức năng hiện có
 
-### Cách hoạt động
+- Bộ lọc ngày, Page, Objective, Product, Target, trạng thái AI.
+- KPI: Spend, GMV, Orders, CPA, ROAS, ADS%, CTR, CPC, CPM, Frequency.
+- Trend theo ngày: Spend / GMV / ROAS.
+- Budget allocation theo Page và Objective.
+- Ads Health Map: Spend vs ROAS.
+- Funnel: Impression → Click → Message → Lead → Purchase → GMV.
+- Page Performance và Product Performance.
+- Campaign Control Center với AI Action: SCALE / WATCH / CUT-FIX.
+- Audience / Target Performance.
+- Creative Intelligence dựa trên Hook rate, CTR và Message.
+- AI Executive Summary và danh sách hành động ưu tiên.
+- Xuất CSV theo đúng bộ lọc hiện tại.
 
-1. **Offline snapshot**: KPI tổng sử dụng dữ liệu ngày thật từ Supermetrics cho giai đoạn 16/09/2026–15/10/2026. Khi đổi ngày, Spend / Impressions / CPM / CPC / CTR / Frequency / Messages / Leads / Purchases / ROAS sẽ tính lại.
-2. **LIVE Google Sheets**: nếu cấu hình `jsonEndpoint` hoặc `csvUrl` trong `config.js`, web đọc dữ liệu DAILY dạng `Date + Campaign`. Khi đó cả KPI, biểu đồ nhóm và bảng Campaign đều lọc theo ngày.
+## Dữ liệu LIVE
 
-### Cấu trúc dữ liệu bắt buộc trong Google Sheets
-
-Supermetrics phải xuất DAILY với tối thiểu các cột:
-
-- Date
-- Campaign name
-- Cost
-- Impressions
-- Link clicks
-- Frequency
-- New messaging contacts
-- On-Facebook leads
-- Omni purchases
-- Purchase conversion value
-
-Nếu thiếu cột `Date`, web không thể lọc đúng theo ngày.
-
-### Cấu hình LIVE
-
-Mở `config.js` và điền một trong hai:
+Website đã sẵn cơ chế đọc JSON endpoint trong `config.js`:
 
 ```js
 jsonEndpoint: "URL_GOOGLE_APPS_SCRIPT_WEB_APP"
 ```
 
-hoặc:
+Endpoint nên trả một mảng row hoặc `{ rows: [...] }`.
 
-```js
-csvUrl: "URL_GOOGLE_SHEET_PUBLISH_CSV"
+### Schema khuyến nghị
+
+```text
+date
+page
+product
+objective
+target
+campaign
+spend
+impressions
+reach
+clicks
+messages
+leads
+purchases
+gmv
+frequency
+video3s
+thruplay
 ```
 
-`apps_script_example.gs` đã được chuẩn bị để đọc tab `Campaigns` và trả dữ liệu DAILY cho web.
+Web cũng có mapping tương thích với một số tên cột tiếng Việt đang dùng trong Google Sheet như `Day`, `Sản phẩm`, `Đích đến chiến dịch`, `Tên quảng cáo`, `Số tiền đã chi tiêu (VND)`, `Lượt hiển thị`, `Người tiếp cận`, `Lượt Click`, `Người liên hệ nhắn tin mới`, `Lead Tiềm Năng`, `Kết quả`, `Target`.
 
-### Lưu ý về ROAS
+## Logic đánh giá
 
-ROAS được tính lại bằng `Purchase conversion value / Spend`. Nếu Meta không trả purchase value cho một ngày, ROAS ngày đó có thể là 0 dù có purchase.
+Dashboard không đánh giá tất cả Objective giống nhau:
 
-## Hai chế độ dashboard
+- **CPAS/Sales:** ưu tiên ROAS, Purchase, CPA, GMV.
+- **Mess:** ưu tiên Messages, Cost/Mess, CTR, CPC và downstream purchase khi có.
+- **Lead:** ưu tiên Lead, CPL và purchase downstream.
+- **Click:** ưu tiên CTR, CPC và conversion sau click nếu có.
 
-- **👔 Quản lý** (mặc định): chi tiêu, đơn hàng, leads, tin nhắn, doanh thu ghi nhận, ROAS; xu hướng theo ngày và so sánh kỳ trước cùng số ngày khi đủ lịch sử; sản phẩm, Page, người phụ trách và chiến dịch trong kỳ. Chi tiêu là số thực tế, không phải ngân sách kế hoạch.
-- **🎯 Ads**: chuyển cấp Campaign → Adset → Ads → Creative → Audience → Product → Page. Bấm một dòng để lọc và đi sâu, chọn tab để đổi chiều phân tích; bấm breadcrumb hoặc “Xóa bộ lọc chi tiết” để bỏ lọc. Results/CPA chọn theo đơn hàng, leads hoặc tin nhắn; CPL luôn theo leads.
+AI Action hiện dùng rule-based diagnostic để website chạy độc lập. Có thể thay bằng OpenAI API/backend ở phiên bản sau để tạo nhận xét sâu hơn.
 
-CSV/Google Sheets có thể bổ sung: `Ad set name`, `Ad name`, `Creative name`, `Audience`, `Product`, `Page name`, `Owner` (hoặc `Người phụ trách`). Apps Script mẫu đã hỗ trợ các cột này. JSON `dailyRows` dùng khóa `adset`, `ad`, `creative`, `audience`, `product`, `page`, `owner`, cùng các chỉ số hiện có. Mỗi dòng cần có cùng mức phân rã và các chỉ số không trùng lặp; không ghép tổng Campaign với tổng Ads trong cùng nguồn vì sẽ cộng hai lần. Không suy đoán sản phẩm hay người phụ trách từ tên chiến dịch.
+## Chạy local
 
-Snapshot hiện có chỉ cung cấp tổng theo ngày: các chiều chưa có dữ liệu hiển thị trạng thái thiếu dữ liệu. GMV là `purchaseValue` từ nguồn, không phải doanh thu đã đối soát. Frequency được tính trung bình có trọng số impressions, chỉ mang tính tham khảo khi tổng hợp.
+Mở `index.html` qua static server (VS Code Live Server, GitHub Pages, Netlify, Vercel hoặc server nội bộ). Không nên mở bằng `file://` nếu dùng endpoint LIVE vì trình duyệt có thể chặn CORS.
+
+## Bước tiếp theo để production
+
+1. Chuẩn hóa Page ID / Campaign ID / Ad Set ID / Ad ID thành cột riêng.
+2. Cho Supermetrics xuất dữ liệu DAILY.
+3. Nối GMV / đơn thực tế từ ERP.
+4. Deploy Apps Script endpoint hoặc backend API.
+5. Điền endpoint vào `config.js`.
+6. Deploy website nội bộ.
+## Chế độ Quản lý / Ads
+Header có switch 👔 Quản lý | 🎯 Ads. Quản lý là mặc định: kết quả kinh doanh, chi tiêu thực tế, xu hướng, Page, sản phẩm và nhân viên phụ trách. Ads có bảng Campaign → Adset → Ads → Creative → Audience → Product → Page; chọn dòng để drill-down, chọn tab để đổi chiều, xóa bộ lọc bằng breadcrumb hoặc nút reset. Results/CPA chọn theo đơn hàng, leads hoặc tin nhắn; CPL theo leads.
+JSON hỗ trợ `dailyRows`, `rows` hoặc `data`. Bổ sung `adset`, `ad`, `creative`, `audience`, `owner` (hoặc `Ad set name`, `Ad name`, `Creative name`, `Owner`, `Người phụ trách`) để có phân rã chi tiết. Mỗi dòng phải có cùng độ phân rã, không trộn tổng Campaign với tổng Ads. Trường thiếu hiển thị chưa phân bổ/chưa có dữ liệu. DATA: SAMPLE là dữ liệu minh họa, không phải số liệu kinh doanh thực tế.
