@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Meta Ads Dashboard - Ngát P</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--dark:#111827;--green:#059669;--amber:#d97706;--red:#dc2626;--blue:#2563eb}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1500px;margin:auto;padding:24px}.topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+    h1{margin:0;font-size:28px}.sub{color:var(--muted);margin-top:6px}.badge{padding:7px 10px;border-radius:999px;background:#ecfdf5;color:#065f46;font-weight:700;font-size:13px}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}.btn,select,input[type="date"]{border:1px solid var(--line);background:white;border-radius:10px;padding:10px 12px;font-weight:600}.btn{cursor:pointer}.btn.primary{background:var(--dark);color:#fff;border-color:var(--dark)}
+    .grid{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+    .kpi .label{color:var(--muted);font-size:13px}.kpi .value{font-size:26px;font-weight:800;margin-top:7px}.kpi .hint{font-size:12px;color:var(--muted);margin-top:3px}
+    .two{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;margin-top:14px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+    .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.section-title h2{font-size:17px;margin:0}.note{font-size:12px;color:var(--muted)}
+    canvas{width:100%!important;max-height:320px}.table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:white;min-width:1200px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13px;text-align:right;white-space:nowrap}th{position:sticky;top:0;background:#111827;color:#fff;z-index:1}th:first-child,td:first-child{text-align:left;max-width:460px;white-space:normal}
+    tr:hover td{background:#f9fafb}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800}.good{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#92400e}.bad{background:#fee2e2;color:#991b1b}.neutral{background:#e5e7eb;color:#374151}
+    .alerts{display:grid;gap:10px}.alert{border-left:4px solid var(--amber);padding:11px 12px;background:#fffbeb;border-radius:8px}.alert.red{border-color:var(--red);background:#fef2f2}.alert.green{border-color:var(--green);background:#ecfdf5}.alert b{display:block;margin-bottom:3px}
+    .status{font-size:12px;color:var(--muted)}.filterbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.filter-group{display:flex;flex-direction:column;gap:5px}.filter-group label{font-size:12px;color:var(--muted);font-weight:700}.preset-group{display:flex;gap:6px;flex-wrap:wrap}.btn.small{padding:8px 10px;font-size:12px}.filter-status{font-size:12px;color:var(--muted);padding:9px 2px}.footer{margin:18px 0 6px;color:var(--muted);font-size:12px}
+    @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}}@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div><h1>Meta Ads Dashboard — Ngát P</h1><div class="sub">BM GiGa - GiGa 3 · chủ động lọc theo ngày</div></div>
+    <div class="controls"><span id="connectionBadge" class="badge">DATA: SAMPLE</span><button class="btn" id="refreshBtn">↻ Cập nhật</button><select id="autoRefresh"><option value="0">Không auto-refresh</option><option value="300000">5 phút</option><option value="900000" selected>15 phút</option><option value="1800000">30 phút</option><option value="3600000">60 phút</option></select><button class="btn primary" id="exportBtn">Xuất CSV</button></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="filterbar">
+      <div class="filter-group"><label>Từ ngày</label><input type="date" id="startDate"></div>
+      <div class="filter-group"><label>Đến ngày</label><input type="date" id="endDate"></div>
+      <div class="filter-group"><label>Chọn nhanh</label><div class="preset-group">
+        <button class="btn small" data-range="7">7 ngày</button>
+        <button class="btn small" data-range="30">30 ngày</button>
+        <button class="btn small" data-range="thisMonth">Tháng này</button>
+        <button class="btn small" data-range="lastMonth">Tháng trước</button>
+        <button class="btn small" data-range="all">Tất cả dữ liệu</button>
+      </div></div>
+      <button class="btn primary" id="applyDateBtn">Áp dụng</button>
+      <span id="dateFilterStatus" class="filter-status"></span>
+    </div>
+  </div>
+
+  <div class="grid" id="kpis"></div>
+
+  <div class="two">
+    <div class="card"><div class="section-title"><h2>Chi phí theo nhóm chiến dịch</h2><span class="note">Messenger / Lead / CPAS</span></div><canvas id="spendChart"></canvas></div>
+    <div class="card"><div class="section-title"><h2>Cảnh báo tối ưu</h2><span id="lastUpdated" class="status"></span></div><div class="alerts" id="alerts"></div></div>
+  </div>
+
+  <div class="three">
+    <div class="card"><div class="section-title"><h2>CTR theo nhóm</h2></div><canvas id="ctrChart"></canvas></div>
+    <div class="card"><div class="section-title"><h2>CPM theo nhóm</h2></div><canvas id="cpmChart"></canvas></div>
+    <div class="card"><div class="section-title"><h2>ROAS theo nhóm</h2></div><canvas id="roasChart"></canvas></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="section-title"><h2>Campaign performance</h2><span class="note">Tên chiến dịch chứa “Ngát P”</span></div>
+    <div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Spend</th><th>CPM</th><th>CPC</th><th>CTR</th><th>Freq.</th><th>Purchase</th><th>ROAS</th><th>Messages</th><th>Leads</th><th>Msg CPL</th><th>Lead CPL</th><th>Khuyến nghị</th></tr></thead><tbody id="campaignRows"></tbody></table></div>
+  </div>
+  <div class="footer">Nguồn đề xuất: Supermetrics → Google Sheets. Website chỉ đọc sheet đã publish/endpoint Apps Script, không lưu mật khẩu Meta Ads.</div>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
