@@ -31,6 +31,11 @@ function doGet() {
       page: String(get(r,['Page','Page name']) || ''),
       owner: String(get(r,['Owner','Ads manager','Người phụ trách']) || ''),
       spend: n(get(r,['Spend','Cost'])),
+      objective: String(get(r,['Objective','objective','Đích đến chiến dịch']) || ''),
+      target: String(get(r,['Target','target','Audience']) || ''),
+      reach: n(get(r,['Reach','Người tiếp cận'])),
+      video3s: n(get(r,['Video3s','video3s'])),
+      thruplay: n(get(r,['ThruPlay','thruplay'])),
       impressions: n(get(r,['Impressions'])),
       clicks: n(get(r,['Clicks','Link clicks'])),
       frequency: n(get(r,['Frequency'])),
@@ -39,7 +44,7 @@ function doGet() {
       messages: n(get(r,['Messages','New messaging contacts'])),
       leads: n(get(r,['Leads','On-Facebook leads']))
     }))
-    .filter(x => x.date && x.campaign.includes('Ngát P'));
+    .filter(x => x.date && x.campaign);
 
   const result = { dailyRows };
   return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);

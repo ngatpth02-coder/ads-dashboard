@@ -1,0 +1,11 @@
+{
+  "name": "ads-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Meta Ads dashboard with a read-only server-side Marketing API connector",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/index.mjs",
+    "test": "node --test server/*.test.mjs"
+  }
+}

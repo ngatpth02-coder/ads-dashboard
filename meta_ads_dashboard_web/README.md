@@ -77,3 +77,7 @@ Mở `index.html` qua static server (VS Code Live Server, GitHub Pages, Netlify,
 ## Chế độ Quản lý / Ads
 Header có switch 👔 Quản lý | 🎯 Ads. Quản lý là mặc định: kết quả kinh doanh, chi tiêu thực tế, xu hướng, Page, sản phẩm và nhân viên phụ trách. Ads có bảng Campaign → Adset → Ads → Creative → Audience → Product → Page; chọn dòng để drill-down, chọn tab để đổi chiều, xóa bộ lọc bằng breadcrumb hoặc nút reset. Results/CPA chọn theo đơn hàng, leads hoặc tin nhắn; CPL theo leads.
 JSON hỗ trợ `dailyRows`, `rows` hoặc `data`. Bổ sung `adset`, `ad`, `creative`, `audience`, `owner` (hoặc `Ad set name`, `Ad name`, `Creative name`, `Owner`, `Người phụ trách`) để có phân rã chi tiết. Mỗi dòng phải có cùng độ phân rã, không trộn tổng Campaign với tổng Ads. Trường thiếu hiển thị chưa phân bổ/chưa có dữ liệu. DATA: SAMPLE là dữ liệu minh họa, không phải số liệu kinh doanh thực tế.
+
+## Kết nối trực tiếp Facebook Ads bằng backend
+
+Đã có backend Node.js và Blueprint Render. Xem [hướng dẫn tạo quyền Meta và triển khai Render](../server/README.md). Bản Render có đăng nhập và đọc Meta Marketing API phía máy chủ; không nhập access token vào website GitHub Pages. Token, ID tài khoản và dịch vụ Render đang chờ chủ tài khoản cung cấp/cấp quyền; kiểm thử hiện dùng fixture, chưa xác thực số liệu tài khoản Meta thật.

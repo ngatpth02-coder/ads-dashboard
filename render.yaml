@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: ads-dashboard-live
+    runtime: node
+    plan: free
+    buildCommand: node --check server/index.mjs
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: META_API_VERSION
+        value: v23.0
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: META_AD_ACCOUNT_ID
+        sync: false
+      - key: DASHBOARD_USER
+        value: manager
+      - key: DASHBOARD_PASSWORD
+        sync: false
+      - key: META_AD_LABELS_JSON
+        value: '{}'
