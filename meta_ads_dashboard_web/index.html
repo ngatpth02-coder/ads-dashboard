@@ -20,13 +20,14 @@
     .alerts{display:grid;gap:10px}.alert{border-left:4px solid var(--amber);padding:11px 12px;background:#fffbeb;border-radius:8px}.alert.red{border-color:var(--red);background:#fef2f2}.alert.green{border-color:var(--green);background:#ecfdf5}.alert b{display:block;margin-bottom:3px}
     .status{font-size:12px;color:var(--muted)}.filterbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:14px}.filter-group{display:flex;flex-direction:column;gap:5px}.filter-group label{font-size:12px;color:var(--muted);font-weight:700}.preset-group{display:flex;gap:6px;flex-wrap:wrap}.btn.small{padding:8px 10px;font-size:12px}.filter-status{font-size:12px;color:var(--muted);padding:9px 2px}.footer{margin:18px 0 6px;color:var(--muted);font-size:12px}
     @media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two,.three{grid-template-columns:1fr}}@media(max-width:560px){.grid{grid-template-columns:1fr}.wrap{padding:14px}h1{font-size:22px}}
+    [hidden]{display:none!important}.mode-switch{display:flex;background:#eff6ff;border-radius:12px;padding:4px;gap:4px}.mode-switch .btn{border:0;background:transparent}.mode-switch [aria-pressed="true"],.btn.active{background:#2563eb;color:white}.btn.primary{background:#2563eb;border-color:#2563eb}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}.business-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.business-row small{display:block;color:var(--muted);margin-top:5px}.empty{padding:20px 0;color:var(--muted);line-height:1.6}.row-link{border:0;background:none;color:var(--blue);cursor:pointer;font:inherit;text-align:left;padding:4px;white-space:normal}.section-title{gap:12px;flex-wrap:wrap}.grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}h2{font-size:17px}#drillPath .btn{margin:3px}.kpi .hint{line-height:1.5}.controls{align-items:center}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="topbar">
     <div><h1>Meta Ads Dashboard — Ngát P</h1><div class="sub">BM GiGa - GiGa 3 · chủ động lọc theo ngày</div></div>
-    <div class="controls"><span id="connectionBadge" class="badge">DATA: SAMPLE</span><button class="btn" id="refreshBtn">↻ Cập nhật</button><select id="autoRefresh"><option value="0">Không auto-refresh</option><option value="300000">5 phút</option><option value="900000" selected>15 phút</option><option value="1800000">30 phút</option><option value="3600000">60 phút</option></select><button class="btn primary" id="exportBtn">Xuất CSV</button></div>
+    <div class="controls"><div class="mode-switch" role="group" aria-label="Chế độ dashboard"><button class="btn" data-mode="manager" aria-pressed="true">👔 Quản lý</button><button class="btn" data-mode="ads" aria-pressed="false">🎯 Ads</button></div><span id="connectionBadge" class="badge">DATA: SAMPLE</span><button class="btn" id="refreshBtn">↻ Cập nhật</button><select id="autoRefresh"><option value="0">Không auto-refresh</option><option value="300000">5 phút</option><option value="900000" selected>15 phút</option><option value="1800000">30 phút</option><option value="3600000">60 phút</option></select><button class="btn primary" id="exportBtn">Xuất CSV</button></div>
   </div>
 
   <div class="card" style="margin-bottom:14px">
@@ -47,21 +48,29 @@
 
   <div class="grid" id="kpis"></div>
 
-  <div class="two">
-    <div class="card"><div class="section-title"><h2>Chi phí theo nhóm chiến dịch</h2><span class="note">Messenger / Lead / CPAS</span></div><canvas id="spendChart"></canvas></div>
-    <div class="card"><div class="section-title"><h2>Cảnh báo tối ưu</h2><span id="lastUpdated" class="status"></span></div><div class="alerts" id="alerts"></div></div>
-  </div>
-
-  <div class="three">
-    <div class="card"><div class="section-title"><h2>CTR theo nhóm</h2></div><canvas id="ctrChart"></canvas></div>
-    <div class="card"><div class="section-title"><h2>CPM theo nhóm</h2></div><canvas id="cpmChart"></canvas></div>
-    <div class="card"><div class="section-title"><h2>ROAS theo nhóm</h2></div><canvas id="roasChart"></canvas></div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-    <div class="section-title"><h2>Campaign performance</h2><span class="note">Tên chiến dịch chứa “Ngát P”</span></div>
-    <div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Spend</th><th>CPM</th><th>CPC</th><th>CTR</th><th>Freq.</th><th>Purchase</th><th>ROAS</th><th>Messages</th><th>Leads</th><th>Msg CPL</th><th>Lead CPL</th><th>Khuyến nghị</th></tr></thead><tbody id="campaignRows"></tbody></table></div>
-  </div>
+  <section id="managerView" aria-label="Tổng quan quản lý">
+    <div class="two">
+      <div class="card"><div class="section-title"><h2>Xu hướng hiệu suất</h2></div><p class="note">Chi phí và kết quả theo ngày trong khoảng đã chọn</p><canvas id="trendChart"></canvas><p id="trendSummary" class="status" aria-live="polite"></p></div>
+      <div class="card"><div class="section-title"><h2>Cần xử lý</h2><span id="lastUpdated" class="status"></span></div><div id="alerts" class="alerts"></div></div>
+    </div>
+    <div class="three" id="businessGroups"></div>
+    <div class="card" style="margin-top:14px"><div class="section-title"><h2>Đội Ads đang chạy gì?</h2></div><div id="activity"></div></div>
+  </section>
+  <section id="adsView" aria-label="Phân tích Ads" hidden>
+    <div class="card" style="margin-top:14px">
+      <div class="section-title"><h2>Phân tích chuyên sâu</h2><button class="btn small" id="resetDrill">Xóa bộ lọc chi tiết</button></div>
+      <div class="filterbar"><label for="resultMetric">Kết quả / CPA theo</label><select id="resultMetric"><option value="purchases">Đơn hàng</option><option value="leads">Khách hàng tiềm năng</option><option value="messages">Tin nhắn</option></select></div>
+      <nav id="dimensionTabs" class="preset-group" aria-label="Cấp phân tích"></nav>
+      <div id="drillPath" class="filter-status" aria-live="polite"></div>
+      <p class="note">Chọn một dòng để đi sâu cấp tiếp theo. Results và CPA dùng loại kết quả đã chọn; CPL tính theo Leads. GMV là giá trị mua hàng được nguồn ghi nhận.</p>
+      <div class="table-wrap"><table><thead id="detailHead"></thead><tbody id="detailRows"></tbody></table></div>
+    </div>
+    <div class="three">
+      <div class="card"><h2>CTR theo nhóm</h2><canvas id="ctrChart"></canvas></div>
+      <div class="card"><h2>CPM theo nhóm</h2><canvas id="cpmChart"></canvas></div>
+      <div class="card"><h2>ROAS theo nhóm</h2><canvas id="roasChart"></canvas></div>
+    </div>
+  </section>
   <div class="footer">Nguồn đề xuất: Supermetrics → Google Sheets. Website chỉ đọc sheet đã publish/endpoint Apps Script, không lưu mật khẩu Meta Ads.</div>
 </div>
 <script src="config.js"></script>

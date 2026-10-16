@@ -36,7 +36,7 @@ function aggregateSummaryRows(rows){
   const spend=sum('spend'), impressions=sum('impressions'), clicks=sum('clicks'), purchaseValue=sum('purchaseValue');
   const wt=rows.reduce((a,b)=>a+((b.frequency!=null&&b.impressions)?b.impressions:0),0);
   const fw=rows.reduce((a,b)=>a+((b.frequency!=null&&b.impressions)?b.frequency*b.impressions:0),0);
-  return {currency:'VND',spend,impressions,cpm:impressions?spend/impressions*1000:null,cpc:clicks?spend/clicks:null,ctr:impressions?clicks/impressions:null,frequency:wt?fw/wt:null,clicks,messages:sum('messages'),leads:sum('leads'),purchases:sum('purchases'),roas:spend?purchaseValue/spend:null};
+  return {currency:'VND',spend,impressions,cpm:impressions?spend/impressions*1000:null,cpc:clicks?spend/clicks:null,ctr:impressions?clicks/impressions:null,frequency:wt?fw/wt:null,clicks,messages:sum('messages'),leads:sum('leads'),purchases:sum('purchases'),purchaseValue,roas:spend?purchaseValue/spend:null};
 }
 
 const fmtMoney=v=>v==null?"—":new Intl.NumberFormat('vi-VN').format(Math.round(v))+" ₫";
@@ -90,13 +90,14 @@ function aggregateDaily(rows){
     const fw=rows.filter(r=>segmentName(r.campaign)===name&&r.frequency!=null&&r.impressions).reduce((a,b)=>a+b.frequency*b.impressions,0), wt=rows.filter(r=>segmentName(r.campaign)===name&&r.frequency!=null&&r.impressions).reduce((a,b)=>a+b.impressions,0);
     return {name,spend:sp,impressions:imp,cpm:imp?sp/imp*1000:null,cpc:clk?sp/clk:null,ctr:imp?clk/imp:null,frequency:wt?fw/wt:null,clicks:clk,messages:cs.reduce((a,b)=>a+(b.messages||0),0),leads:cs.reduce((a,b)=>a+(b.leads||0),0),purchases:cs.reduce((a,b)=>a+(b.purchases||0),0),roas:sp?pv/sp:null};
   });
-  return {summary,segments:segs,campaigns};
+  return {summary,segments:segs,campaigns,rows};
 }
 
 function applyDateFilter(){
   if(!rawData) return;
   const start=document.getElementById('startDate').value;
   const end=document.getElementById('endDate').value;
+  if(start && end && start>end){document.getElementById('dateFilterStatus').textContent='Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.';return;}
   if(rawData.dailyRows?.length){
     const filtered=rawData.dailyRows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end));
     const data=aggregateDaily(filtered);
@@ -106,7 +107,7 @@ function applyDateFilter(){
   } else if(rawData.dailySummaryRows?.length){
     const filtered=rawData.dailySummaryRows.filter(r=>(!start||r.date>=start)&&(!end||r.date<=end));
     const summary=aggregateSummaryRows(filtered);
-    render({summary,segments:[],campaigns:[],period:{start,end}}, rawData.sourceLabel||'SNAPSHOT DAILY');
+    render({summary,segments:[],campaigns:[],rows:filtered,period:{start,end}}, rawData.sourceLabel||'SNAPSHOT DAILY');
     document.getElementById('dateFilterStatus').textContent=`${filtered.length} ngày dữ liệu thực tế trong khoảng đã chọn · Bảng Campaign cần LIVE Sheet để lọc theo ngày.`;
   } else {
     render(rawData, rawData.sourceLabel||'SAMPLE');
@@ -127,19 +128,9 @@ function setPreset(type){
 }
 
 function render(data, sourceLabel){
-  currentData=data; const s=data.summary;
+  currentData=data;
   document.getElementById('connectionBadge').textContent=`DATA: ${sourceLabel}`;
-  document.getElementById('lastUpdated').textContent='Cập nhật: '+new Date().toLocaleString('vi-VN');
-  const cards=[['Spend',fmtMoney(s.spend)],['Impressions',fmtNum(s.impressions)],['CPM',fmtMoney(s.cpm)],['CPC Link',fmtMoney(s.cpc)],['CTR Link',fmtPct(s.ctr)],['Frequency',fmtDec(s.frequency)],['Messages',fmtNum(s.messages)],['Leads',fmtNum(s.leads)],['Purchases',fmtNum(s.purchases)],['ROAS',fmtX(s.roas)]];
-  document.getElementById('kpis').innerHTML=cards.map(([a,b])=>`<div class="card kpi"><div class="label">${a}</div><div class="value">${b}</div></div>`).join('');
-  const alerts=[];
-  if(s.frequency>3) alerts.push(['Frequency cao',`Frequency tổng ${fmtDec(s.frequency)}. Nên kiểm tra ad fatigue theo campaign và refresh creative ở nhóm >3.`,'red']);
-  if(s.roas!=null && s.roas<1) alerts.push(['ROAS thấp',`ROAS báo cáo ${fmtX(s.roas)}. Cần đối soát purchase value/attribution trước khi scale theo ROAS.`,'red']);
-  const bestMsg=[...data.campaigns].filter(x=>x.messages>0).sort((a,b)=>(a.spend/a.messages)-(b.spend/b.messages))[0];
-  if(bestMsg) alerts.push(['Messenger nổi bật',`${bestMsg.campaign}: ~${fmtMoney(bestMsg.spend/bestMsg.messages)}/new messaging contact.`,'green']);
-  document.getElementById('alerts').innerHTML=alerts.map(a=>`<div class="alert ${a[2]}"><b>${a[0]}</b>${a[1]}</div>`).join('') || '<div class="alert green"><b>Không có cảnh báo lớn</b>Khoảng ngày đang chọn chưa có tín hiệu vượt ngưỡng.</div>';
-  document.getElementById('campaignRows').innerHTML=(data.campaigns?.length?[...data.campaigns].sort((a,b)=>b.spend-a.spend).map(c=>{const [rec,cls]=recommendation(c); const mc=c.messages?c.spend/c.messages:null; const lc=c.leads?c.spend/c.leads:null; return `<tr><td>${c.campaign}</td><td>${fmtMoney(c.spend)}</td><td>${fmtMoney(c.cpm)}</td><td>${fmtMoney(c.cpc)}</td><td>${fmtPct(c.ctr)}</td><td>${fmtDec(c.frequency)}</td><td>${fmtNum(c.purchases)}</td><td>${fmtX(c.roas)}</td><td>${fmtNum(c.messages)}</td><td>${fmtNum(c.leads)}</td><td>${fmtMoney(mc)}</td><td>${fmtMoney(lc)}</td><td><span class="tag ${cls}">${rec}</span></td></tr>`}).join(''):`<tr><td colspan="13" style="text-align:center;color:#6b7280;padding:22px">Snapshot offline chỉ có KPI theo ngày. Kết nối Google Sheets DAILY để bảng Campaign lọc theo ngày.</td></tr>`);
-  drawChart('spendChart','bar',(data.segments||[]).map(x=>x.name),(data.segments||[]).map(x=>x.spend),'Spend'); drawChart('ctrChart','bar',(data.segments||[]).map(x=>x.name),(data.segments||[]).map(x=>(x.ctr||0)*100),'CTR %'); drawChart('cpmChart','bar',(data.segments||[]).map(x=>x.name),(data.segments||[]).map(x=>x.cpm||0),'CPM'); drawChart('roasChart','bar',(data.segments||[]).map(x=>x.name),(data.segments||[]).map(x=>x.roas||0),'ROAS');
+  renderViews();
 }
 
 function drawChart(id,type,labels,vals,label){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),{type,data:{labels,datasets:[{label,data:vals}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}}); }
@@ -148,7 +139,7 @@ function parseCsv(text){ const rows=[]; let row=[],cell='',q=false; for(let i=0;
 
 function normalizeFromCsv(rows){
   if(rows.length<2) throw new Error('CSV rỗng'); const h=rows[0].map(x=>x.trim()); const ix=(...names)=>{for(const n of names){const i=h.findIndex(x=>x.toLowerCase()===n.toLowerCase()); if(i>=0)return i;} return -1}; const num=v=>{if(v==null||v==='')return null; const n=Number(String(v).replace(/[%₫, ]/g,'')); return Number.isFinite(n)?n:null};
-  const dailyRows=rows.slice(1).map(r=>{ let ctr=num(r[ix('CTR','CTR Link','CTR (link click-through rate)')]); if(ctr!=null&&ctr>1)ctr/=100; return {date:String(r[ix('Date')]||'').slice(0,10),campaign:r[ix('Campaign','Campaign name')]||'',spend:num(r[ix('Spend','Cost')]),impressions:num(r[ix('Impressions')]),clicks:num(r[ix('Clicks','Link clicks')]),frequency:num(r[ix('Frequency')]),purchases:num(r[ix('Purchases','Omni purchases')]),purchaseValue:num(r[ix('Purchase value','Purchase conversion value','Omni purchase conversion value')]),messages:num(r[ix('Messages','New messaging contacts')]),leads:num(r[ix('Leads','On-Facebook leads')]),ctr}; }).filter(x=>x.campaign&&(!cfg.campaignContains||x.campaign.includes(cfg.campaignContains)));
+  const dailyRows=rows.slice(1).map(r=>{ let ctr=num(r[ix('CTR','CTR Link','CTR (link click-through rate)')]); if(ctr!=null&&ctr>1)ctr/=100; return {adset:r[ix('Adset','Ad set name')]||'',ad:r[ix('Ad','Ad name')]||'',creative:r[ix('Creative','Creative name')]||'',audience:r[ix('Audience','Audience name')]||'',product:r[ix('Product','Product name')]||'',page:r[ix('Page','Page name')]||'',owner:r[ix('Owner','Ads manager','Người phụ trách')]||'',date:String(r[ix('Date')]||'').slice(0,10),campaign:r[ix('Campaign','Campaign name')]||'',spend:num(r[ix('Spend','Cost')]),impressions:num(r[ix('Impressions')]),clicks:num(r[ix('Clicks','Link clicks')]),frequency:num(r[ix('Frequency')]),purchases:num(r[ix('Purchases','Omni purchases')]),purchaseValue:num(r[ix('Purchase value','Purchase conversion value','Omni purchase conversion value')]),messages:num(r[ix('Messages','New messaging contacts')]),leads:num(r[ix('Leads','On-Facebook leads')]),ctr}; }).filter(x=>x.campaign&&(!cfg.campaignContains||x.campaign.includes(cfg.campaignContains)));
   if(dailyRows.some(x=>x.date)) return {dailyRows:dailyRows.filter(x=>x.date),sourceLabel:'LIVE SHEET'};
   const campaigns=dailyRows.map(x=>({campaign:x.campaign,spend:x.spend,impressions:x.impressions,cpm:null,cpc:x.clicks?x.spend/x.clicks:null,ctr:x.ctr,frequency:x.frequency,purchases:x.purchases,roas:null,messages:x.messages,leads:x.leads})); const sum=k=>campaigns.reduce((a,b)=>a+(b[k]||0),0); return {summary:{currency:'VND',spend:sum('spend'),impressions:sum('impressions'),cpm:null,cpc:null,ctr:null,frequency:null,clicks:null,messages:sum('messages'),leads:sum('leads'),purchases:sum('purchases'),roas:null},segments:[],campaigns,sourceLabel:'LIVE SHEET'};
 }
@@ -172,4 +163,65 @@ document.getElementById('autoRefresh').onchange=e=>setupTimer(Number(e.target.va
 document.getElementById('applyDateBtn').onclick=applyDateFilter;
 document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setPreset(b.dataset.range));
 document.getElementById('exportBtn').onclick=()=>{ if(!currentData)return; const head=['Campaign','Spend','CPM','CPC','CTR','Frequency','Purchases','ROAS','Messages','Leads']; const lines=[head,...currentData.campaigns.map(c=>[c.campaign,c.spend,c.cpm,c.cpc,c.ctr,c.frequency,c.purchases,c.roas,c.messages,c.leads])].map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n'); const blob=new Blob(['\ufeff'+lines],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`meta_ads_ngat_p_${document.getElementById('startDate').value||'all'}_${document.getElementById('endDate').value||'all'}.csv`;a.click();URL.revokeObjectURL(a.href); };
+let mode='manager', dimension='campaign', drill=[], resultMetric='purchases';
+const dimensions=[['campaign','Campaign'],['adset','Adset'],['ad','Ads'],['creative','Creative'],['audience','Audience'],['product','Product'],['page','Page']];
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const metricNames={purchases:'Đơn hàng',leads:'Khách hàng tiềm năng',messages:'Tin nhắn'};
+function rowsNow(){return currentData.rows||currentData.campaigns||[];}
+function grouped(rows,key){
+  const groups=new Map();
+  for(const row of rows){const name=String(row[key]||'Chưa phân bổ');if(!groups.has(name))groups.set(name,[]);groups.get(name).push(row);}
+  return [...groups].map(([name,items])=>({name,items,...aggregateSummaryRows(items)})).sort((a,b)=>b.spend-a.spend);
+}
+function setMode(next){mode=next;document.getElementById('managerView').hidden=mode!=='manager';document.getElementById('adsView').hidden=mode!=='ads';document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));renderViews();}
+function renderViews(){
+  if(!currentData)return;
+  const s=currentData.summary,rows=rowsNow(),results=s[resultMetric],gmv=s.purchaseValue??(s.roas!=null?s.roas*s.spend:null);
+  const cards=mode==='manager'?[['Chi phí quảng cáo',fmtMoney(s.spend),'Chi tiêu thực tế trong kỳ'],['Đơn hàng',fmtNum(s.purchases),'Số lượt mua được ghi nhận'],['Khách hàng tiềm năng',fmtNum(s.leads),'Leads được nguồn ghi nhận'],['Tin nhắn mới',fmtNum(s.messages),'Liên hệ nhắn tin mới'],['Doanh thu ghi nhận',fmtMoney(gmv),'Giá trị mua hàng từ nguồn, chưa đối soát'],['Hiệu quả doanh thu',fmtX(s.roas),'Doanh thu ghi nhận / chi phí']]:[['Spend',fmtMoney(s.spend)],['Results',fmtNum(results),metricNames[resultMetric]],['CPA',fmtMoney(results?s.spend/results:null)],['CPL',fmtMoney(s.leads?s.spend/s.leads:null)],['GMV',fmtMoney(gmv)],['ROAS',fmtX(s.roas)],['CPM',fmtMoney(s.cpm)],['CTR',fmtPct(s.ctr)],['CPC',fmtMoney(s.cpc)],['Frequency',fmtDec(s.frequency)]];
+  document.getElementById('kpis').innerHTML=cards.map(([label,value,hint])=>`<div class="card kpi"><div class="label">${label}</div><div class="value">${value}</div><div class="hint">${hint||''}</div></div>`).join('');
+  if(mode==='ads'){renderDetails();for(const [id,key,factor] of [['ctrChart','ctr',100],['cpmChart','cpm',1],['roasChart','roas',1]])drawChart(id,'bar',(currentData.segments||[]).map(x=>x.name),(currentData.segments||[]).map(x=>(x[key]||0)*factor),key.toUpperCase());return;}
+  document.getElementById('lastUpdated').textContent='Cập nhật: '+new Date().toLocaleString('vi-VN');
+  const issues=[];
+  if(s.roas!=null&&s.roas<1)issues.push('Doanh thu ghi nhận thấp hơn chi phí. Cần đối soát giá trị đơn hàng và nguồn ghi nhận trước khi điều chỉnh ngân sách.');
+  if(s.frequency>3)issues.push('Quảng cáo lặp lại nhiều lần trên cùng người xem. Đội Ads cần kiểm tra nội dung và tệp khách hàng.');
+  if(!rows.some(r=>r.owner))issues.push('Chưa có thông tin người phụ trách để phân công xử lý.');
+  document.getElementById('alerts').innerHTML=issues.map(x=>`<div class="alert">${esc(x)}</div>`).join('')||'<div class="alert green">Chưa có cảnh báo theo các chỉ số hiện có.</div>';
+  document.getElementById('businessGroups').innerHTML=[['product','Sản phẩm'],['page','Page'],['owner','Nhân viên Ads']].map(([key,title])=>{
+    const available=rows.some(r=>r[key]);const groups=available?grouped(rows,key):[];
+    return `<div class="card"><h2>${title}</h2><p class="note">Theo chi tiêu · Đơn hàng · Doanh thu ghi nhận</p>${available?groups.map(g=>`<div class="business-row"><div><b>${esc(g.name)}</b><small>${fmtNum(g.purchases)} đơn · ${fmtMoney(g.purchaseValue)}</small></div><div>${fmtMoney(g.spend)}<small>ROAS ${fmtX(g.roas)}</small></div></div>`).join(''):`<div class="empty">Chưa có dữ liệu ${title.toLowerCase()} trong nguồn đang kết nối.</div>`}</div>`;
+  }).join('');
+  document.getElementById('activity').innerHTML=rows.some(r=>r.campaign)?grouped(rows,'campaign').map(g=>`<div class="business-row"><div><b>${esc(g.name)}</b><small>Phụ trách: ${esc([...new Set(g.items.map(r=>r.owner||'Chưa phân bổ'))].join(', '))}</small></div><div>${fmtMoney(g.spend)}<small>${fmtNum(g.purchases)} đơn · ${fmtNum(g.leads)} leads · ${fmtNum(g.messages)} tin nhắn</small></div></div>`).join(''):'<div class="empty">Snapshot chỉ có tổng theo ngày. Kết nối dữ liệu Campaign để xem đội Ads đang chạy gì.</div>';
+  renderTrend(rows);
+}
+function renderTrend(rows){
+  const dated=rows.filter(r=>r.date),days=grouped(dated,'date').sort((a,b)=>a.name.localeCompare(b.name));
+  if(charts.trendChart)charts.trendChart.destroy();
+  charts.trendChart=new Chart(document.getElementById('trendChart'),{type:'line',data:{labels:days.map(d=>d.name),datasets:[{label:'Chi phí (₫)',data:days.map(d=>d.spend),borderColor:'#2563eb',yAxisID:'spend',tension:.25},{label:'Đơn hàng',data:days.map(d=>d.purchases),borderColor:'#059669',yAxisID:'results',tension:.25}]},options:{responsive:true,scales:{spend:{beginAtZero:true,position:'left'},results:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}}}});
+  const dates=[...new Set((rawData.dailyRows||rawData.dailySummaryRows||[]).map(r=>r.date))].sort(),period=currentData.period;
+  const note=document.getElementById('trendSummary');
+  if(!days.length||!period?.start||!period?.end){note.textContent='Chưa đủ dữ liệu theo ngày để so sánh xu hướng.';return;}
+  const start=new Date(period.start+'T00:00:00Z'),end=new Date(period.end+'T00:00:00Z'),length=Math.round((end-start)/86400000)+1;
+  if(length<1){note.textContent='Khoảng ngày không hợp lệ.';return;}
+  const prevStart=new Date(+start-length*86400000).toISOString().slice(0,10),prevEnd=new Date(+start-86400000).toISOString().slice(0,10);
+  if(!dates.length||dates[0]>prevStart){note.textContent='Chưa đủ dữ liệu kỳ trước để kết luận tăng hay giảm. Biểu đồ hiển thị kết quả theo ngày.';return;}
+  const previous=aggregateSummaryRows((rawData.dailyRows||rawData.dailySummaryRows).filter(r=>r.date>=prevStart&&r.date<=prevEnd));
+  const change=(now,prev)=>prev?`${now>=prev?'tăng':'giảm'} ${Math.abs((now-prev)/prev*100).toFixed(1)}%`:'chưa có cơ sở so sánh';
+  note.textContent=`So với ${prevStart} → ${prevEnd}: chi phí ${change(currentData.summary.spend,previous.spend)}, đơn hàng ${change(currentData.summary.purchases,previous.purchases)}. So sánh hai kỳ cùng số ngày; ngày thiếu dữ liệu cần được đối soát.`;
+}
+function renderDetails(){
+  const rows=rowsNow().filter(r=>drill.every(f=>String(r[f.key]||'Chưa phân bổ')===f.value));
+  document.getElementById('dimensionTabs').innerHTML=dimensions.map(([key,label])=>`<button class="btn small ${key===dimension?'active':''}" data-dimension="${key}" aria-pressed="${key===dimension}">${label}</button>`).join('');
+  document.getElementById('drillPath').innerHTML=drill.length?drill.map((f,i)=>`<button class="btn small" data-remove-filter="${i}" title="Bỏ bộ lọc từ cấp này">${dimensions.find(d=>d[0]===f.key)[1]}: ${esc(f.value)} ×</button>`).join(''):'Tất cả dữ liệu trong khoảng ngày đã chọn';
+  const label=dimensions.find(d=>d[0]===dimension)[1];
+  document.getElementById('detailHead').innerHTML='<tr>'+[label,'Spend','Results','CPA','CPL','GMV','ROAS','CPM','CTR','CPC','Frequency'].map(x=>`<th>${x}</th>`).join('')+'</tr>';
+  const available=rows.some(r=>r[dimension]);const groups=available?grouped(rows,dimension):[];
+  document.getElementById('detailRows').innerHTML=groups.length?groups.map((g,i)=>{const result=g[resultMetric];return `<tr><td><button class="row-link" data-group="${i}">${esc(g.name)}</button></td>${[fmtMoney(g.spend),fmtNum(result),fmtMoney(result?g.spend/result:null),fmtMoney(g.leads?g.spend/g.leads:null),fmtMoney(g.purchaseValue),fmtX(g.roas),fmtMoney(g.cpm),fmtPct(g.ctr),fmtMoney(g.cpc),fmtDec(g.frequency)].map(v=>`<td>${v}</td>`).join('')}</tr>`;}).join(''):`<tr><td colspan="11" class="empty">${rows.length?`Nguồn chưa có dữ liệu ${label} ở phạm vi này.`:'Không có dữ liệu trong phạm vi đã chọn.'}</td></tr>`;
+  document.querySelectorAll('[data-group]').forEach(b=>b.onclick=()=>{const index=dimensions.findIndex(d=>d[0]===dimension);drill=drill.filter(f=>f.key!==dimension);drill.push({key:dimension,value:groups[Number(b.dataset.group)].name});if(index<dimensions.length-1)dimension=dimensions[index+1][0];renderDetails();});
+  document.querySelectorAll('[data-dimension]').forEach(b=>b.onclick=()=>{dimension=b.dataset.dimension;renderDetails();});
+  document.querySelectorAll('[data-remove-filter]').forEach(b=>b.onclick=()=>{drill=drill.slice(0,Number(b.dataset.removeFilter));renderDetails();});
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+document.getElementById('resetDrill').onclick=()=>{drill=[];dimension='campaign';renderDetails();};
+document.getElementById('resultMetric').onchange=e=>{resultMetric=e.target.value;renderViews();};
+
 const initialMs=cfg.autoRefreshMs||900000; document.getElementById('autoRefresh').value=String(initialMs); setupTimer(initialMs); load();

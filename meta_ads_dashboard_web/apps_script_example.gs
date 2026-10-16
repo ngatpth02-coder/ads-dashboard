@@ -23,6 +23,13 @@ function doGet() {
     .map(r => ({
       date: isoDate(get(r,['Date'])),
       campaign: String(get(r,['Campaign','Campaign name']) || ''),
+      adset: String(get(r,['Adset','Ad set name']) || ''),
+      ad: String(get(r,['Ad','Ad name']) || ''),
+      creative: String(get(r,['Creative','Creative name']) || ''),
+      audience: String(get(r,['Audience','Audience name']) || ''),
+      product: String(get(r,['Product','Product name']) || ''),
+      page: String(get(r,['Page','Page name']) || ''),
+      owner: String(get(r,['Owner','Ads manager','Người phụ trách']) || ''),
       spend: n(get(r,['Spend','Cost'])),
       impressions: n(get(r,['Impressions'])),
       clicks: n(get(r,['Clicks','Link clicks'])),
