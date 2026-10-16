@@ -1,47 +1,76 @@
-# Meta Ads Dashboard — Ngát P
+# Ads Control Center — Internal Meta Ads Dashboard
 
-## Bản sửa bộ lọc ngày
+Dashboard nội bộ để theo dõi toàn cảnh Meta Ads theo **thời gian → Page → mục tiêu → sản phẩm → campaign → target → creative**.
 
-Bản này đã sửa lỗi dữ liệu không thay đổi khi đổi ngày.
+## Chức năng hiện có
 
-### Cách hoạt động
+- Bộ lọc ngày, Page, Objective, Product, Target, trạng thái AI.
+- KPI: Spend, GMV, Orders, CPA, ROAS, ADS%, CTR, CPC, CPM, Frequency.
+- Trend theo ngày: Spend / GMV / ROAS.
+- Budget allocation theo Page và Objective.
+- Ads Health Map: Spend vs ROAS.
+- Funnel: Impression → Click → Message → Lead → Purchase → GMV.
+- Page Performance và Product Performance.
+- Campaign Control Center với AI Action: SCALE / WATCH / CUT-FIX.
+- Audience / Target Performance.
+- Creative Intelligence dựa trên Hook rate, CTR và Message.
+- AI Executive Summary và danh sách hành động ưu tiên.
+- Xuất CSV theo đúng bộ lọc hiện tại.
 
-1. **Offline snapshot**: KPI tổng sử dụng dữ liệu ngày thật từ Supermetrics cho giai đoạn 16/09/2026–15/10/2026. Khi đổi ngày, Spend / Impressions / CPM / CPC / CTR / Frequency / Messages / Leads / Purchases / ROAS sẽ tính lại.
-2. **LIVE Google Sheets**: nếu cấu hình `jsonEndpoint` hoặc `csvUrl` trong `config.js`, web đọc dữ liệu DAILY dạng `Date + Campaign`. Khi đó cả KPI, biểu đồ nhóm và bảng Campaign đều lọc theo ngày.
+## Dữ liệu LIVE
 
-### Cấu trúc dữ liệu bắt buộc trong Google Sheets
-
-Supermetrics phải xuất DAILY với tối thiểu các cột:
-
-- Date
-- Campaign name
-- Cost
-- Impressions
-- Link clicks
-- Frequency
-- New messaging contacts
-- On-Facebook leads
-- Omni purchases
-- Purchase conversion value
-
-Nếu thiếu cột `Date`, web không thể lọc đúng theo ngày.
-
-### Cấu hình LIVE
-
-Mở `config.js` và điền một trong hai:
+Website đã sẵn cơ chế đọc JSON endpoint trong `config.js`:
 
 ```js
 jsonEndpoint: "URL_GOOGLE_APPS_SCRIPT_WEB_APP"
 ```
 
-hoặc:
+Endpoint nên trả một mảng row hoặc `{ rows: [...] }`.
 
-```js
-csvUrl: "URL_GOOGLE_SHEET_PUBLISH_CSV"
+### Schema khuyến nghị
+
+```text
+date
+page
+product
+objective
+target
+campaign
+spend
+impressions
+reach
+clicks
+messages
+leads
+purchases
+gmv
+frequency
+video3s
+thruplay
 ```
 
-`apps_script_example.gs` đã được chuẩn bị để đọc tab `Campaigns` và trả dữ liệu DAILY cho web.
+Web cũng có mapping tương thích với một số tên cột tiếng Việt đang dùng trong Google Sheet như `Day`, `Sản phẩm`, `Đích đến chiến dịch`, `Tên quảng cáo`, `Số tiền đã chi tiêu (VND)`, `Lượt hiển thị`, `Người tiếp cận`, `Lượt Click`, `Người liên hệ nhắn tin mới`, `Lead Tiềm Năng`, `Kết quả`, `Target`.
 
-### Lưu ý về ROAS
+## Logic đánh giá
 
-ROAS được tính lại bằng `Purchase conversion value / Spend`. Nếu Meta không trả purchase value cho một ngày, ROAS ngày đó có thể là 0 dù có purchase.
+Dashboard không đánh giá tất cả Objective giống nhau:
+
+- **CPAS/Sales:** ưu tiên ROAS, Purchase, CPA, GMV.
+- **Mess:** ưu tiên Messages, Cost/Mess, CTR, CPC và downstream purchase khi có.
+- **Lead:** ưu tiên Lead, CPL và purchase downstream.
+- **Click:** ưu tiên CTR, CPC và conversion sau click nếu có.
+
+AI Action hiện dùng rule-based diagnostic để website chạy độc lập. Có thể thay bằng OpenAI API/backend ở phiên bản sau để tạo nhận xét sâu hơn.
+
+## Chạy local
+
+Mở `index.html` qua static server (VS Code Live Server, GitHub Pages, Netlify, Vercel hoặc server nội bộ). Không nên mở bằng `file://` nếu dùng endpoint LIVE vì trình duyệt có thể chặn CORS.
+
+## Bước tiếp theo để production
+
+1. Chuẩn hóa Page ID / Campaign ID / Ad Set ID / Ad ID thành cột riêng.
+2. Cho Supermetrics xuất dữ liệu DAILY.
+3. Nối GMV / đơn thực tế từ ERP.
+4. Deploy Apps Script endpoint hoặc backend API.
+5. Điền endpoint vào `config.js`.
+6. Deploy website nội bộ.
