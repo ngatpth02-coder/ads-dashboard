@@ -1,0 +1,12 @@
+name = "giga-ads-secure"
+main = "secure-api/worker.js"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./meta_ads_dashboard_web"
+binding = "ASSETS"
+run_worker_first = true
+
+# Configure Cloudflare Access for the ENTIRE worker domain before sharing.
+# Secrets: GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, CF_ACCESS_TEAM_DOMAIN,
+# CF_ACCESS_AUD, ROLE_RULES_JSON. Add in Cloudflare Workers dashboard.
