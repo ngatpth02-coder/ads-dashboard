@@ -51,9 +51,27 @@ async function data(env,email,from,to){
     impressions:0,reach:0,clicks:0,messages:0,leads:0,video3s:0,thruplay:0
   }));
 }
+// Private connectivity test: never return sheet rows, campaign information or credentials.
+async function privateCheck(request,env){
+  if(request.method!=="POST")return fail("NOT_FOUND",404);
+  const supplied=request.headers.get("X-Giga-Health-Key")||"";
+  if(!env.HEALTH_CHECK_KEY||supplied.length<32||supplied.length>512)return fail("NOT_FOUND",404);
+  const digest=async s=>new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)));
+  const a=await digest(supplied),b=await digest(env.HEALTH_CHECK_KEY);
+  let mismatch=0;for(let i=0;i<a.length;i++)mismatch|=a[i]^b[i];
+  if(mismatch!==0)return fail("NOT_FOUND",404);
+  try{
+    const token=await googleToken(env);
+    const range=encodeURIComponent("ADS_PERFORMANCE!A1:A1");
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`,{headers:{Authorization:"Bearer "+token}});
+    if(!res.ok){console.error("health: SHEETS_READ_FAILED",res.status);return fail("SHEETS_READ_FAILED",503);}
+    return new Response(JSON.stringify({ok:true,googleAuth:true,sheetReadable:true}),{headers:corsHeaders});
+  }catch(e){const category=String(e.message||"");console.error("health:",category);return fail(["GOOGLE_CREDENTIALS_MISSING","GOOGLE_AUTH_FAILED"].includes(category)?category:"HEALTH_CHECK_FAILED",503)}
+}
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
+  if(url.pathname==="/api/private-health")return privateCheck(request,env);
   try{
     const email=await accessUser(request,env);
     if(url.pathname!=="/api/insights"||request.method!=="GET")return fail("NOT_FOUND",404);
