@@ -21,4 +21,6 @@ try{const r=await fetch(endpoint+"?"+new URLSearchParams({since:from,until:to}),
 $all("[data-days]").forEach(b=>b.onclick=()=>{const v=b.dataset.days;let end=new Date(),start=new Date(end);if(v==="month")start=new Date(end.getFullYear(),end.getMonth(),1);else if(v==="all"){start=null;end=null}else start.setDate(end.getDate()-Number(v)+1);const iso=d=>d?d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"):"";$("from").value=iso(start);$("to").value=iso(end);load()});
 $("reset").onclick=()=>{["owner","page","objective","product","target","search"].forEach(id=>$(id).value="");pageNum=0;render()};
 $("reload").onclick=load;$all("[data-dim]").forEach(b=>b.onclick=()=>{dimension=b.dataset.dim;$all("[data-dim]").forEach(x=>x.classList.toggle("active",x===b));render()});$("exportRows").onclick=()=>csv(view(),"giga-ads-detail.csv");$("exportGrouped").onclick=()=>csv(groups(view(),dimension),"giga-ads-"+dimension+".csv");
-function showLogin(){}\nfunction hideLogin(){}\nload();
+function showLogin(){}
+function hideLogin(){}
+load();
