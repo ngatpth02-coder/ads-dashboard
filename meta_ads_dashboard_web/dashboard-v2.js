@@ -21,8 +21,4 @@ try{const r=await fetch(endpoint+"?"+new URLSearchParams({since:from,until:to}),
 $all("[data-days]").forEach(b=>b.onclick=()=>{const v=b.dataset.days;let end=new Date(),start=new Date(end);if(v==="month")start=new Date(end.getFullYear(),end.getMonth(),1);else if(v==="all"){start=null;end=null}else start.setDate(end.getDate()-Number(v)+1);const iso=d=>d?d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"):"";$("from").value=iso(start);$("to").value=iso(end);load()});
 $("reset").onclick=()=>{["owner","page","objective","product","target","search"].forEach(id=>$(id).value="");pageNum=0;render()};
 $("reload").onclick=load;$all("[data-dim]").forEach(b=>b.onclick=()=>{dimension=b.dataset.dim;$all("[data-dim]").forEach(x=>x.classList.toggle("active",x===b));render()});$("exportRows").onclick=()=>csv(view(),"giga-ads-detail.csv");$("exportGrouped").onclick=()=>csv(groups(view(),dimension),"giga-ads-"+dimension+".csv");
-function showLogin(){$("loginOverlay").hidden=false;$("logout").hidden=true}
-function hideLogin(){$("loginOverlay").hidden=true;$("logout").hidden=false}
-$("loginForm").addEventListener("submit",async e=>{e.preventDefault();$("loginButton").disabled=true;$("loginError").textContent="Đang xác thực…";try{const r=await fetch("/api/login",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:$("loginPassword").value})});if(!r.ok)throw Error(r.status===503?"Chưa cấu hình mật khẩu và khóa phiên trong Cloudflare Secrets.":"Mật khẩu không đúng hoặc xác thực thất bại.");$("loginPassword").value="";$("loginError").textContent="";hideLogin();await load()}catch(err){$("loginError").textContent=err.message}finally{$("loginButton").disabled=false}});
-$("logout").onclick=async()=>{await fetch("/api/logout",{method:"POST",credentials:"same-origin"});raw=[];showLogin();render()};
-load();
+function showLogin(){}\nfunction hideLogin(){}\nload();
