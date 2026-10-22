@@ -16,3 +16,5 @@ This branch is a deployable draft; **not live** until Cloudflare and Google cred
 - Historical Google Sheets date cells are formatted `dd/mm/yyyy`; Sheets is read with FORMATTED_VALUE. Worker converts those dates to ISO and Vietnamese-grouped numbers to numeric VND.
 - Worker Access authentication uses a cryptographically validated Access JWT and the per-email role list; no service-account key ever appears in browser code or GitHub.
 - Do not use a public Google Apps Script publish link or Sheets published CSV for private data.
+
+Deployment trigger: Cloudflare secure API.
