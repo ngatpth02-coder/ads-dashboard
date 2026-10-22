@@ -18,3 +18,5 @@ This branch is a deployable draft; **not live** until Cloudflare and Google cred
 - Do not use a public Google Apps Script publish link or Sheets published CSV for private data.
 
 Deployment trigger: Cloudflare secure API.
+
+Rebuild request: deploy the authenticated API from the feature/secure-ads-api branch.
