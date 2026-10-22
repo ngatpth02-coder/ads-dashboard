@@ -1,11 +1,11 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GIGA | Ads Intelligence</title><link rel="stylesheet" href="dashboard-v2.css"><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script></head>
-<body><div class="shell">
+<body><div id="loginOverlay" class="loginOverlay"><form id="loginForm" class="loginForm"><h2>GIGA · Đăng nhập nội bộ</h2><p>Sử dụng mật khẩu quản trị riêng cho Dashboard, không sử dụng mật khẩu Google.</p><label>Mật khẩu quản trị<input id="loginPassword" type="password" autocomplete="current-password" required minlength="20"></label><button type="submit" id="loginButton">Đăng nhập</button><p id="loginError" role="alert"></p><small>Phiên quản trị thử nghiệm kéo dài 8 giờ.</small></form></div><div class="shell">
 <aside class="side"><div class="logo"><span class="logo-mark">G</span><div><b>GIGA INSIGHTS</b><small>META ADS CONTROL CENTER</small></div></div>
 <nav><a href="#overview" class="selected">▦ &nbsp; Tổng quan</a><a href="#trend">⌁ &nbsp; Xu hướng</a><a href="#breakdown">◫ &nbsp; Hiệu suất</a><a href="#detail">▤ &nbsp; Chi tiết Ads</a><a href="#insights">✦ &nbsp; Nhận xét AI</a></nav>
 <div class="sidefoot"><span class="dot"></span> DATA GOVERNANCE<br><small>Nhân viên chỉ xem phạm vi được cấp quyền từ API</small></div></aside>
 <main class="main">
-<header class="top"><div><div class="eyebrow">GIGA DIGITAL · MARKETING PERFORMANCE</div><h1>Ads Intelligence <span>Dashboard</span></h1><p>Phân tích chi phí, đơn hàng, doanh thu và hiệu suất quảng cáo</p></div><div class="topright"><span id="sourceStatus" class="pill warn">CHƯA XÁC THỰC</span><button id="reload">↻ Đồng bộ</button></div></header>
+<header class="top"><div><div class="eyebrow">GIGA DIGITAL · MARKETING PERFORMANCE</div><h1>Ads Intelligence <span>Dashboard</span></h1><p>Phân tích chi phí, đơn hàng, doanh thu và hiệu suất quảng cáo</p></div><div class="topright"><span id="sourceStatus" class="pill warn">CHƯA XÁC THỰC</span><button id="logout" hidden>Đăng xuất</button><button id="reload">↻ Đồng bộ</button></div></header>
 <div class="accessnotice" id="accessNotice">Dữ liệu nội bộ được bảo vệ. API chưa xác thực người dùng nên Dashboard không tải hay hiển thị dữ liệu thật. Không sử dụng bản GitHub Pages công khai làm báo cáo nội bộ.</div>
 <section class="filters">
 <div class="filtertop"><b>Bộ lọc phân tích</b><div class="presets"><button data-days="7">7 ngày</button><button data-days="30">30 ngày</button><button data-days="month">Tháng này</button><button data-days="all">Toàn kỳ</button></div></div>
