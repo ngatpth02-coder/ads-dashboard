@@ -60,7 +60,7 @@ async function erpTotals(env,from,to){
  const records=(await response.json()).values||[];
  const byDate=new Map(),orders=new Map();
  for(const r of records){
-  const date=iso(r[0]);if(date<from||date>to||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+  const date=iso(r[0]);if(date<from||date>to||!/^\d{4}-\d{2}-\d{2}$/.test(date))continue;
   const amount=val(r[12]),id=String(r[1]||"").trim(),adId=String(r[18]||"").trim();
   if(!byDate.has(date))byDate.set(date,{date,gmv:0,attributedGmv:0,unattributedGmv:0,orders:0,attributedOrders:0});
   const d=byDate.get(date);d.gmv+=amount;
