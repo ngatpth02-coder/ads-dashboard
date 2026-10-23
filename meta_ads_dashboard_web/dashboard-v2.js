@@ -26,5 +26,5 @@ function hideLogin(){$("googleLogin").hidden=true;$("logout").hidden=false}
 $("googleLogin").onclick=()=>{window.location.assign("/api/auth/google/start")};
 $("logout").onclick=async()=>{await fetch("/api/logout",{method:"POST",credentials:"same-origin"});raw=[];showLogin();render();$("accessNotice").textContent="Đã đăng xuất. Nhấn Đăng nhập bằng Google để tiếp tục."};
 const authResult=new URLSearchParams(window.location.search).get("auth");
-if(authResult){$("accessNotice").textContent="Đăng nhập Google chưa hoàn tất: "+authResult+". Kiểm tra email được cấp quyền và cấu hình OAuth.";history.replaceState(null,"",window.location.pathname)}
-load();
+if(authResult){history.replaceState(null,"",window.location.pathname);}
+load().then(()=>{if(authResult){$("accessNotice").textContent="Đăng nhập Google chưa hoàn tất ("+authResult+"). Kiểm tra cấu hình OAuth và quyền email; dữ liệu vẫn được bảo vệ.";$("accessNotice").className="accessnotice";}});
