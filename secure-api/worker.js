@@ -38,7 +38,7 @@ function val(v){if(typeof v==="number")return v;const s=String(v??"").trim().rep
 function iso(v){const m=String(v||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:String(v||"").slice(0,10)}
 async function data(env,email,from,to){
   const rule=lookupRole(env,email);if(!rule||!["manager","ads"].includes(rule.role))return null;
-  const bearer=await googleToken(env),range=encodeURIComponent("ADS_PERFORMANCE!A2:Q6000");
+  const bearer=await googleToken(env),range=encodeURIComponent("ADS_PERFORMANCE!A2:Q");
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueRenderOption=FORMATTED_VALUE`,{headers:{Authorization:"Bearer "+bearer}});
   if(!res.ok)throw Error("SHEETS_READ_FAILED");
   const values=(await res.json()).values||[];
