@@ -124,14 +124,15 @@ async function oauthCallback(req,env){
  if(saved.state!==state||saved.exp<Date.now())return landing("expired");
  const redirect=originFor(req)+"/api/auth/google/callback";
  const exchange=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_OAUTH_CLIENT_ID,client_secret:env.GOOGLE_OAUTH_CLIENT_SECRET,redirect_uri:redirect,grant_type:"authorization_code"})});
- if(!exchange.ok){console.error("oauth code exchange failed",exchange.status);return landing("exchange_failed")}
+ if(!exchange.ok){let detail="unknown";try{const j=await exchange.json();detail=String(j.error||"unknown")}catch{}console.error("OAUTH_TOKEN_EXCHANGE_FAILED",exchange.status,detail);return landing("exchange_"+detail.replace(/[^a-z_]/g,"").slice(0,40))}
  const tokens=await exchange.json();
  if(!tokens.access_token)return landing("exchange_failed");
  const infoRes=await fetch("https://openidconnect.googleapis.com/v1/userinfo",{headers:{Authorization:"Bearer "+tokens.access_token}});
  if(!infoRes.ok)return landing("identity_failed");
  const profile=await infoRes.json();
  const email=String(profile.email||"").trim().toLowerCase();
- if(profile.email_verified!==true||!lookupRole(env,email))return landing("not_authorized");
+ if(profile.email_verified!==true)return landing("email_not_verified");
+ if(!lookupRole(env,email)){console.error("OAUTH_USER_NOT_ALLOWED");return landing("not_authorized");}
  const payload=b64url(enc.encode(JSON.stringify({email,exp:Date.now()+28800000})));
  const sessionCookie=cookieHeader("giga_session",payload+"."+await sig(payload,env.SESSION_SIGNING_KEY),28800);
  const headers=new Headers({Location:"/","Cache-Control":"no-store"});
