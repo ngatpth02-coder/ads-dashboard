@@ -72,7 +72,7 @@ async function privateCheck(request,env){
 const enc=new TextEncoder();
 async function hash(s){return new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(s)))}
 function ctEq(a,b){if(a.length!==b.length)return false;let v=0;for(let i=0;i<a.length;i++)v|=a[i]^b[i];return v===0}
-async function sig(s,secret){let key=await crypto.subtle.importKey("raw",enc.encode(secret),"HMAC",false,["sign"]);return b64url(await crypto.subtle.sign("HMAC",key,enc.encode(s)))}
+async function sig(s,secret){let key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64url(await crypto.subtle.sign("HMAC",key,enc.encode(s)))}
 function getCookie(req){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith("giga_session="))?.slice("giga_session=".length)||""}
 function lookupRole(env,email){
   const target=String(email||"").trim().toLowerCase();
