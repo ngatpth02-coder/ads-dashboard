@@ -37,7 +37,7 @@ async function googleToken(env){
 function val(v){if(typeof v==="number")return v;const s=String(v??"").trim().replace(/[^\d,.-]/g,"");if(!s)return 0;return Number(s.replace(/\./g,"").replace(",", "."))||0}
 function iso(v){const m=String(v||"").match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:String(v||"").slice(0,10)}
 async function data(env,email,from,to){
-  const rules=JSON.parse(env.ROLE_RULES_JSON||"{}"),rule=email==="pilot.manager@giga.internal"?{role:"manager"}:rules[email];if(!rule||!["manager","ads"].includes(rule.role))return null;
+  const rule=lookupRole(env,email);if(!rule||!["manager","ads"].includes(rule.role))return null;
   const bearer=await googleToken(env),range=encodeURIComponent("ADS_PERFORMANCE!A2:Q6000");
   const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueRenderOption=FORMATTED_VALUE`,{headers:{Authorization:"Bearer "+bearer}});
   if(!res.ok)throw Error("SHEETS_READ_FAILED");
@@ -74,31 +74,72 @@ async function hash(s){return new Uint8Array(await crypto.subtle.digest("SHA-256
 function ctEq(a,b){if(a.length!==b.length)return false;let v=0;for(let i=0;i<a.length;i++)v|=a[i]^b[i];return v===0}
 async function sig(s,secret){let key=await crypto.subtle.importKey("raw",enc.encode(secret),"HMAC",false,["sign"]);return b64url(await crypto.subtle.sign("HMAC",key,enc.encode(s)))}
 function getCookie(req){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith("giga_session="))?.slice("giga_session=".length)||""}
+function lookupRole(env,email){
+  const target=String(email||"").trim().toLowerCase();
+  const managers=String(env.ALLOWED_MANAGER_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+  if(managers.includes(target))return {role:"manager"};
+  const rules=JSON.parse(env.ROLE_RULES_JSON||"{}");
+  const rule=rules[target];
+  return rule&&["manager","ads"].includes(rule.role)?rule:null;
+}
+function cookieValue(req,name){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="))?.slice(name.length+1)||""}
+function cookieHeader(name,value,maxAge,path="/api"){return name+"="+value+"; Secure; HttpOnly; SameSite=Lax; Path="+path+"; Max-Age="+maxAge}
 async function session(req,env){
- if(!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return false;
- const parts=getCookie(req).split(".");if(parts.length!==2)return false;
- if(!ctEq(await hash(parts[1]),await hash(await sig(parts[0],env.SESSION_SIGNING_KEY))))return false;
- try{const p=JSON.parse(new TextDecoder().decode(decode64(parts[0])));return p.role==="manager"&&p.exp>Date.now()&&p.exp<=Date.now()+28800000}catch{return false}
+ if(!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return null;
+ const parts=cookieValue(req,"giga_session").split(".");if(parts.length!==2)return null;
+ if(!ctEq(await hash(parts[1]),await hash(await sig(parts[0],env.SESSION_SIGNING_KEY))))return null;
+ try{const p=JSON.parse(new TextDecoder().decode(decode64(parts[0])));if(!p.email||!p.exp||p.exp<Date.now()||p.exp>Date.now()+28800000)return null;const rule=lookupRole(env,p.email);return rule?{email:p.email,role:rule.role}:null}catch{return null}
+}
+function newRandom(){return b64url(crypto.getRandomValues(new Uint8Array(32)))}
+function originFor(req){return new URL(req.url).origin}
+async function oauthStart(req,env){
+ if(!env.GOOGLE_OAUTH_CLIENT_ID||!env.GOOGLE_OAUTH_CLIENT_SECRET||!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return fail("OAUTH_NOT_CONFIGURED",503);
+ const state=newRandom(),nonce=newRandom(),payload=b64url(enc.encode(JSON.stringify({state,nonce,exp:Date.now()+600000})));
+ const stateSig=await sig(payload,env.SESSION_SIGNING_KEY);
+ const redirect=originFor(req)+"/api/auth/google/callback";
+ const params=new URLSearchParams({client_id:env.GOOGLE_OAUTH_CLIENT_ID,redirect_uri:redirect,response_type:"code",scope:"openid email profile",state,prompt:"select_account",nonce});
+ return new Response(null,{status:302,headers:{Location:"https://accounts.google.com/o/oauth2/v2/auth?"+params.toString(),"Cache-Control":"no-store","Set-Cookie":cookieHeader("giga_oauth_state",payload+"."+stateSig,600,"/api/auth/google")}});
+}
+async function oauthCallback(req,env){
+ const url=new URL(req.url),state=url.searchParams.get("state"),code=url.searchParams.get("code"),returned=cookieValue(req,"giga_oauth_state");
+ const clear=cookieHeader("giga_oauth_state","",0,"/api/auth/google");
+ const landing=(message)=>new Response(null,{status:302,headers:{Location:"/?auth="+encodeURIComponent(message),"Cache-Control":"no-store","Set-Cookie":clear}});
+ if(!state||!code||!returned||!env.SESSION_SIGNING_KEY)return landing("denied");
+ const parts=returned.split(".");if(parts.length!==2||!ctEq(await hash(parts[1]),await hash(await sig(parts[0],env.SESSION_SIGNING_KEY))))return landing("denied");
+ let saved;try{saved=JSON.parse(new TextDecoder().decode(decode64(parts[0])))}catch{return landing("denied")}
+ if(saved.state!==state||saved.exp<Date.now())return landing("expired");
+ const redirect=originFor(req)+"/api/auth/google/callback";
+ const exchange=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code,client_id:env.GOOGLE_OAUTH_CLIENT_ID,client_secret:env.GOOGLE_OAUTH_CLIENT_SECRET,redirect_uri:redirect,grant_type:"authorization_code"})});
+ if(!exchange.ok){console.error("oauth code exchange failed",exchange.status);return landing("exchange_failed")}
+ const tokens=await exchange.json();
+ if(!tokens.access_token)return landing("exchange_failed");
+ const infoRes=await fetch("https://openidconnect.googleapis.com/v1/userinfo",{headers:{Authorization:"Bearer "+tokens.access_token}});
+ if(!infoRes.ok)return landing("identity_failed");
+ const profile=await infoRes.json();
+ const email=String(profile.email||"").trim().toLowerCase();
+ if(profile.email_verified!==true||!lookupRole(env,email))return landing("not_authorized");
+ const payload=b64url(enc.encode(JSON.stringify({email,exp:Date.now()+28800000})));
+ const sessionCookie=cookieHeader("giga_session",payload+"."+await sig(payload,env.SESSION_SIGNING_KEY),28800);
+ const headers=new Headers({Location:"/","Cache-Control":"no-store"});
+ headers.append("Set-Cookie",clear);headers.append("Set-Cookie",sessionCookie);
+ return new Response(null,{status:302,headers});
 }
 async function authentication(req,env,path){
- if(path==="/api/logout"&&req.method==="POST")return new Response(JSON.stringify({ok:true}),{headers:{...corsHeaders,"Set-Cookie":"giga_session=; Secure; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0"}});
- if(path==="/api/session"&&req.method==="GET")return new Response(JSON.stringify({authenticated:await session(req,env)}),{headers:corsHeaders});
- if(path!=="/api/login"||req.method!=="POST")return fail("NOT_FOUND",404);
- if(!env.ADMIN_LOGIN_PASSWORD||env.ADMIN_LOGIN_PASSWORD.length<20||!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return fail("AUTH_NOT_CONFIGURED",503);
- if(Number(req.headers.get("Content-Length")||0)>2048)return fail("INVALID_REQUEST");
- let body;try{body=await req.json()}catch{return fail("INVALID_REQUEST")}
- const supplied=String(body.password||"");if(supplied.length>512||!ctEq(await hash(supplied),await hash(env.ADMIN_LOGIN_PASSWORD)))return fail("INVALID_CREDENTIALS",401);
- const payload=b64url(enc.encode(JSON.stringify({role:"manager",exp:Date.now()+28800000})));
- return new Response(JSON.stringify({ok:true}),{headers:{...corsHeaders,"Set-Cookie":"giga_session="+payload+"."+await sig(payload,env.SESSION_SIGNING_KEY)+"; Secure; HttpOnly; SameSite=Strict; Path=/api; Max-Age=28800"}});
+ if(path==="/api/logout"&&req.method==="POST")return new Response(JSON.stringify({ok:true}),{headers:{...corsHeaders,"Set-Cookie":cookieHeader("giga_session","",0)}});
+ if(path==="/api/session"&&req.method==="GET"){const p=await session(req,env);return new Response(JSON.stringify({authenticated:!!p,email:p?.email||null,role:p?.role||null}),{headers:corsHeaders});}
+ return fail("NOT_FOUND",404);
 }
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
   if(url.pathname==="/api/private-health")return privateCheck(request,env);
-  if(["/api/login","/api/logout","/api/session"].includes(url.pathname))return authentication(request,env,url.pathname);
+  if(url.pathname==="/api/auth/google/start")return oauthStart(request,env);
+  if(url.pathname==="/api/auth/google/callback")return oauthCallback(request,env);
+  if(["/api/logout","/api/session"].includes(url.pathname))return authentication(request,env,url.pathname);
   try{
-    if(!(await session(request,env)))return fail("UNAUTHORIZED",401);
-    const email="pilot.manager@giga.internal";
+    const user=await session(request,env);
+    if(!user)return fail("UNAUTHORIZED",401);
+    const email=user.email;
     if(url.pathname!=="/api/insights"||request.method!=="GET")return fail("NOT_FOUND",404);
     const since=url.searchParams.get("since")||"2026-01-01",until=url.searchParams.get("until")||new Date().toISOString().slice(0,10);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(since)||!/^\d{4}-\d{2}-\d{2}$/.test(until)||since>until)return fail("INVALID_DATE_RANGE");
