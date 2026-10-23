@@ -131,7 +131,13 @@ async function authentication(req,env,path){
 }
 export default {async fetch(request,env){
   const url=new URL(request.url);
-  if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
+  if(!url.pathname.startsWith("/api/")) {
+    try { return await env.ASSETS.fetch(request); }
+    catch (error) {
+      console.error("ASSET_ROUTE_ERROR",String(error));
+      return new Response("Dashboard currently unavailable. Check Worker logs.",{status:503});
+    }
+  }
   if(url.pathname==="/api/private-health")return privateCheck(request,env);
   if(url.pathname==="/api/auth/google/start")return oauthStart(request,env);
   if(url.pathname==="/api/auth/google/callback")return oauthCallback(request,env);
