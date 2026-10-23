@@ -51,6 +51,25 @@ async function data(env,email,from,to){
     impressions:0,reach:0,clicks:0,messages:0,leads:0,video3s:0,thruplay:0
   }));
 }
+// ERP totals are independent of Ad ID attribution. Manager only: prevent cross-employee leakage.
+async function erpTotals(env,from,to){
+ const token=await googleToken(env);
+ const range=encodeURIComponent("ERP_ORDERS!B2:T");
+ const response=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueRenderOption=FORMATTED_VALUE`,{headers:{Authorization:"Bearer "+token}});
+ if(!response.ok)throw Error("ERP_READ_FAILED");
+ const records=(await response.json()).values||[];
+ const byDate=new Map(),orders=new Map();
+ for(const r of records){
+  const date=iso(r[0]);if(date<from||date>to||!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))continue;
+  const amount=val(r[12]),id=String(r[1]||"").trim(),adId=String(r[18]||"").trim();
+  if(!byDate.has(date))byDate.set(date,{date,gmv:0,attributedGmv:0,unattributedGmv:0,orders:0,attributedOrders:0});
+  const d=byDate.get(date);d.gmv+=amount;
+  if(adId)d.attributedGmv+=amount;else d.unattributedGmv+=amount;
+  if(id){const key=date+"|"+id;if(!orders.has(key))orders.set(key,{date,attributed:false});if(adId)orders.get(key).attributed=true;}
+ }
+ for(const v of orders.values()){const d=byDate.get(v.date);d.orders++;if(v.attributed)d.attributedOrders++;}
+ return [...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
 // Private connectivity test: never return sheet rows, campaign information or credentials.
 async function privateCheck(request,env){
   if(request.method!=="POST")return fail("NOT_FOUND",404);
@@ -165,6 +184,7 @@ export default {async fetch(request,env){
     const since=url.searchParams.get("since")||"2026-01-01",until=url.searchParams.get("until")||new Date().toISOString().slice(0,10);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(since)||!/^\d{4}-\d{2}-\d{2}$/.test(until)||since>until)return fail("INVALID_DATE_RANGE");
     const rows=await data(env,email,since,until);if(rows===null)return fail("FORBIDDEN",403);
-    return new Response(JSON.stringify({currency:"VND",rows,source:"ADS_PERFORMANCE",metricsAvailable:["spend","purchases","gmv"]}),{headers:corsHeaders});
+    const erpDaily=user.role==="manager"?await erpTotals(env,since,until):null;
+    return new Response(JSON.stringify({currency:"VND",rows,erpDaily,source:"ADS_PERFORMANCE + ERP_ORDERS",metricsAvailable:["spend","purchases","gmv","erpGmv","erpOrders"]}),{headers:corsHeaders});
   }catch(e){const code=String(e.message||"");if(["ACCESS_REQUIRED","BAD_TOKEN","INVALID_ACCESS","INVALID_ISSUER","INVALID_SIGNATURE","UNKNOWN_KEY"].includes(code))return fail("UNAUTHORIZED",401);console.error(code);return fail("API_UNAVAILABLE",503)}
 }};
