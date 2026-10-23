@@ -93,12 +93,26 @@ async function session(req,env){
 function newRandom(){return b64url(crypto.getRandomValues(new Uint8Array(32)))}
 function originFor(req){return new URL(req.url).origin}
 async function oauthStart(req,env){
- if(!env.GOOGLE_OAUTH_CLIENT_ID||!env.GOOGLE_OAUTH_CLIENT_SECRET||!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return fail("OAUTH_NOT_CONFIGURED",503);
- const state=newRandom(),nonce=newRandom(),payload=b64url(enc.encode(JSON.stringify({state,nonce,exp:Date.now()+600000})));
- const stateSig=await sig(payload,env.SESSION_SIGNING_KEY);
- const redirect=originFor(req)+"/api/auth/google/callback";
- const params=new URLSearchParams({client_id:env.GOOGLE_OAUTH_CLIENT_ID,redirect_uri:redirect,response_type:"code",scope:"openid email profile",state,prompt:"select_account",nonce});
- return new Response(null,{status:302,headers:{Location:"https://accounts.google.com/o/oauth2/v2/auth?"+params.toString(),"Cache-Control":"no-store","Set-Cookie":cookieHeader("giga_oauth_state",payload+"."+stateSig,600,"/api/auth/google")}});
+ if(req.method!=="GET")return fail("METHOD_NOT_ALLOWED",405);
+ if(!env.GOOGLE_OAUTH_CLIENT_ID)return fail("MISSING_OAUTH_CLIENT_ID",503);
+ if(!env.SESSION_SIGNING_KEY||env.SESSION_SIGNING_KEY.length<48)return fail("MISSING_SESSION_SIGNING_KEY",503);
+ let stage="create_state";
+ try {
+  const state=newRandom(),nonce=newRandom();
+  const payload=b64url(enc.encode(JSON.stringify({state,nonce,exp:Date.now()+600000})));
+  stage="sign_state";
+  const stateSig=await sig(payload,env.SESSION_SIGNING_KEY);
+  stage="build_redirect";
+  const redirect=originFor(req)+"/api/auth/google/callback";
+  const params=new URLSearchParams({client_id:String(env.GOOGLE_OAUTH_CLIENT_ID).trim(),redirect_uri:redirect,response_type:"code",scope:"openid email profile",state,prompt:"select_account",nonce});
+  const headers=new Headers({"Cache-Control":"no-store"});
+  headers.set("Location","https://accounts.google.com/o/oauth2/v2/auth?"+params.toString());
+  headers.append("Set-Cookie",cookieHeader("giga_oauth_state",payload+"."+stateSig,600,"/api/auth/google"));
+  return new Response(null,{status:302,headers});
+ }catch(e){
+  console.error("OAUTH_START_ERROR",stage,String(e?.name||"Error"),String(e?.message||e));
+  return fail("OAUTH_START_"+stage.toUpperCase()+"_FAILED",503);
+ }
 }
 async function oauthCallback(req,env){
  const url=new URL(req.url),state=url.searchParams.get("state"),code=url.searchParams.get("code"),returned=cookieValue(req,"giga_oauth_state");
