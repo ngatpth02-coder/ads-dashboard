@@ -7,6 +7,9 @@ directory = "./meta_ads_dashboard_web"
 binding = "ASSETS"
 run_worker_first = true
 
-# Configure Cloudflare Access for the ENTIRE worker domain before sharing.
-# Secrets: GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, CF_ACCESS_TEAM_DOMAIN,
-# CF_ACCESS_AUD, ROLE_RULES_JSON. Add in Cloudflare Workers dashboard.
+# Same-origin OAuth via Google Identity. Do not expose Google credentials in browser code.
+# Runtime secrets: GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_OAUTH_CLIENT_ID,
+# GOOGLE_OAUTH_CLIENT_SECRET, SESSION_SIGNING_KEY, HEALTH_CHECK_KEY.
+# Required runtime variable: ALLOWED_MANAGER_EMAILS (comma-separated, verified emails).
+# Optional: ROLE_RULES_JSON for employee-scoped access, e.g. {"staff@example.com":{"role":"ads","owner":"Owner name"}}.
+# OAuth authorized redirect: https://giga-ads-secure.ngatpth02.workers.dev/api/auth/google/callback
