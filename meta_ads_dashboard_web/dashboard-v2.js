@@ -23,4 +23,8 @@ $("reset").onclick=()=>{["owner","page","objective","product","target","search"]
 $("reload").onclick=load;$all("[data-dim]").forEach(b=>b.onclick=()=>{dimension=b.dataset.dim;$all("[data-dim]").forEach(x=>x.classList.toggle("active",x===b));render()});$("exportRows").onclick=()=>csv(view(),"giga-ads-detail.csv");$("exportGrouped").onclick=()=>csv(groups(view(),dimension),"giga-ads-"+dimension+".csv");
 function showLogin(){$("googleLogin").hidden=false;$("logout").hidden=true}
 function hideLogin(){$("googleLogin").hidden=true;$("logout").hidden=false}
+$("googleLogin").onclick=()=>{window.location.assign("/api/auth/google/start")};
+$("logout").onclick=async()=>{await fetch("/api/logout",{method:"POST",credentials:"same-origin"});raw=[];showLogin();render();$("accessNotice").textContent="Đã đăng xuất. Nhấn Đăng nhập bằng Google để tiếp tục."};
+const authResult=new URLSearchParams(window.location.search).get("auth");
+if(authResult){$("accessNotice").textContent="Đăng nhập Google chưa hoàn tất: "+authResult+". Kiểm tra email được cấp quyền và cấu hình OAuth.";history.replaceState(null,"",window.location.pathname)}
 load();
