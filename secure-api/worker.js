@@ -139,8 +139,8 @@ export default {async fetch(request,env){
     }
   }
   if(url.pathname==="/api/private-health")return privateCheck(request,env);
-  if(url.pathname==="/api/auth/google/start")return oauthStart(request,env);
-  if(url.pathname==="/api/auth/google/callback")return oauthCallback(request,env);
+  if(url.pathname==="/api/auth/google/start") { try { return await oauthStart(request,env); } catch(e) { console.error("OAUTH_START_ERROR",String(e?.message||e)); return fail("OAUTH_START_FAILED",503); } }
+  if(url.pathname==="/api/auth/google/callback") { try { return await oauthCallback(request,env); } catch(e) { console.error("OAUTH_CALLBACK_ERROR",String(e?.message||e)); return new Response(null,{status:302,headers:{Location:"/?auth=callback_failed","Cache-Control":"no-store"}}); } }
   if(["/api/logout","/api/session"].includes(url.pathname))return authentication(request,env,url.pathname);
   try{
     const user=await session(request,env);
